@@ -1,0 +1,14 @@
+**/**node_modules
+**/**.DS_Store
+notes.md
+**/.generated/**
+**/test
+**/test2
+**/demo
+**/raw
+uke_*
+!uke_1
+test-uke-1
+**/*-self-notes.md
+**/*tekst.md
+**/ukens-plan.md
