@@ -2,14 +2,16 @@
 
 ## Innholdsfortegnelse
 - [Om kurset](#om-kurset)
-- [Ukesoppgaver](#ukesoppgaver)
-  - [Uke 1](./uke_1#oppgavesett-introduksjon-til-cloud-teknologi)
+- [Ukesinnhold]()
+  - [Uke 1](./uke_1)
 - [Formål](#formål)
-- [Forutsetninger](#forutsetninger)
 - [Hvordan bruke ukesoppgavene](#hvordan-bruke-ukesoppgavene)
 
 ## Om kurset
 Velkommen til introduksjonskurset i Cloud Teknologi ved Gokstad Akademiet! Dette kurset er designet for å gi deg en solid forståelse av grunnleggende konsepter i cloud teknologi og hvordan du bygger og administrerer cloud-baserte løsninger fra bunnen av.
+
+> [!IMPORTANT]
+> **Før du begynner å gjøre oppgaver i AWS er det meget viktig at du har lest innholdet om AWS Free Tier som du finner [her](./aws.md).**
 
 ## Ukesoppgaver
 I løpet av kurset vil du få tilgang til en rekke ukesoppgaver. Disse oppgavene er ikke obligatoriske, men de er sterkt anbefalt da de gir deg muligheten til å anvende dine ferdigheter i praksis. Oppgavene er utformet for å veilede deg gjennom ulike aspekter av cloud teknologi, og de vil hjelpe deg med å bygge opp din kompetanse steg for steg.
