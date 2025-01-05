@@ -1,6 +1,18 @@
 # Oppgavesett: Docker og docker-compose
 # Innholdsfortegnelse 
 
+1. [Opprette en enkel Docker-kontainer](#oppgave-1-opprette-en-enkel-docker-kontainer)
+2. [Bygge og kjøre Docker-kontaineren](#oppgave-2-bygge-og-kjøre-docker-kontaineren)
+3. [Bruke Docker Compose](#oppgave-3-bruke-docker-compose)
+4. [Kjør applikasjonen med Docker Compose](#oppgave-4-kjør-applikasjonen-med-docker-compose)
+5. [Legge til en database](#oppgave-5-legge-til-en-database)
+6. [Koble applikasjonen til databasen](#oppgave-6-koble-applikasjonen-til-databasen)
+7. [Miljøvariabler](#oppgave-7-miljøvariabler)
+8. [Volumer](#oppgave-8-volumer)
+9. [Skalerbarhet](#oppgave-9-skalerbarhet)
+10. [Helsekontroll](#oppgave-10-helsekontroll)
+11. [Feilsøking](#oppgave-11-feilsøking)
+
 
 ## Introduksjon til Docker
 
@@ -135,7 +147,7 @@ docker-compose up
 > [!CAUTION]  
 > Sørg for at du har nok ressurser på maskinen din til å kjøre både web-tjenesten og databasen.
 
-Utvid `docker-compose.yml` filen til å inkludere en MongoDB-database.
+Utvid `docker-compose.yml` filen til å inkludere en MySQL-database.
 
 <details><summary>Løsning</summary>
 
@@ -149,42 +161,48 @@ services:
     depends_on:
       - db
   db:
-    image: mongo
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: example
     ports:
-      - "27017:27017"
+      - "3306:3306"
 ```
 
 **Forklaring:**
 
-1. **Legge til en database**: Vi legger til en MongoDB-tjeneste i `docker-compose.yml` filen. MongoDB er en populær NoSQL-database som lagrer data i JSON-lignende dokumenter.
-2. **depends_on**: Dette sikrer at MongoDB-tjenesten starter før web-tjenesten. Dette er viktig for å sikre at databasen er tilgjengelig når web-applikasjonen prøver å koble til den.
+1. **Legge til en database**: Vi legger til en MySQL-tjeneste i `docker-compose.yml` filen. MySQL er en populær relasjonsdatabase.
+2. **depends_on**: Dette sikrer at MySQL-tjenesten starter før web-tjenesten. Dette er viktig for å sikre at databasen er tilgjengelig når web-applikasjonen prøver å koble til den.
 
 </details>
 
 ### **Oppgave 6: Koble applikasjonen til databasen**
 
 > [!NOTE]  
-> Sørg for at MongoDB-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
+> Sørg for at MySQL-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
 
-Oppdater Node.js-applikasjonen til å koble til MongoDB-databasen.
+Oppdater Node.js-applikasjonen til å koble til MySQL-databasen.
 
 <details><summary>Løsning</summary>
 
 ```javascript
 // app.js
 const http = require('http');
-const MongoClient = require('mongodb').MongoClient;
+const mysql = require('mysql');
 
 const hostname = '0.0.0.0';
 const port = 8080;
-const url = 'mongodb://db:27017';
-const dbName = 'mydatabase';
+const dbConfig = {
+  host: 'db',
+  user: 'root',
+  password: 'example',
+  database: 'mydatabase'
+};
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
+const connection = mysql.createConnection(dbConfig);
+
+connection.connect(err => {
   if (err) throw err;
-
-  const db = client.db(dbName);
-  console.log(`Connected to database ${dbName}`);
+  console.log('Connected to MySQL database');
 
   const server = http.createServer((req, res) => {
     res.statusCode = 200;
@@ -200,7 +218,7 @@ MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
 
 **Forklaring:**
 
-1. **Koble til MongoDB**: Vi bruker MongoDB-klienten til å koble til databasen. MongoClient er en del av MongoDB Node.js-driveren som lar oss kommunisere med MongoDB fra en Node.js-applikasjon.
+1. **Koble til MySQL**: Vi bruker MySQL-klienten til å koble til databasen. MySQL-klienten er en del av MySQL Node.js-driveren som lar oss kommunisere med MySQL fra en Node.js-applikasjon.
 2. **Oppdatere applikasjonen**: Vi oppdaterer applikasjonen til å koble til databasen før den starter HTTP-serveren. Dette sikrer at applikasjonen kan kommunisere med databasen når den mottar forespørsler.
 
 </details>
@@ -224,29 +242,37 @@ services:
     depends_on:
       - db
     environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
+      - MYSQL_HOST=db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=example
+      - MYSQL_DATABASE=mydatabase
   db:
-    image: mongo
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: example
     ports:
-      - "27017:27017"
+      - "3306:3306"
 ```
 
 ```javascript
 // app.js
 const http = require('http');
-const MongoClient = require('mongodb').MongoClient;
+const mysql = require('mysql2');
 
 const hostname = '0.0.0.0';
 const port = 8080;
-const url = process.env.MONGO_URL;
-const dbName = process.env.MONGO_DB;
+const dbConfig = {
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE
+};
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
+const connection = mysql.createConnection(dbConfig);
+
+connection.connect(err => {
   if (err) throw err;
-
-  const db = client.db(dbName);
-  console.log(`Connected to database ${dbName}`);
+  console.log(`Connected to MySQL database ${process.env.MYSQL_DATABASE}`);
 
   const server = http.createServer((req, res) => {
     res.statusCode = 200;
@@ -265,44 +291,49 @@ MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
 1. **Miljøvariabler**: Vi bruker miljøvariabler for å konfigurere databaseforbindelsen. Miljøvariabler er en måte å konfigurere applikasjoner på uten å hardkode verdier i kildekoden.
 2. **Oppdatere applikasjonen**: Vi oppdaterer applikasjonen til å bruke miljøvariablene. Dette gjør applikasjonen mer fleksibel og enklere å konfigurere i forskjellige miljøer.
 
-</details>
+</details>-e 
+
 
 ### **Oppgave 8: Volumer**
 
 > [!IMPORTANT]  
 > Volumer sikrer at dataene dine vedvares selv om kontaineren stoppes eller slettes.
 
-Legg til et volum for å vedvare dataene i MongoDB-databasen.
+Legg til et volum for å vedvare dataene i MySQL-databasen.
 
 <details><summary>Løsning</summary>
 
 ```yaml
 version: '3'
 services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
-  db:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+    web:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            - MYSQL_URL=mysql://db:3306
+            - MYSQL_DB=mydatabase
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=example
+    db:
+        image: mysql
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=example
+        volumes:
+            - mysql-data:/var/lib/mysql
 
 volumes:
-  mongo-data:
+    mysql-data:
 ```
 
 **Forklaring:**
 
-1. **Volumer**: Vi legger til et volum for å vedvare dataene i MongoDB-databasen. Volumer er en måte å lagre data utenfor kontainerens filsystem, slik at dataene ikke går tapt når kontaineren stoppes eller slettes.
-2. **Oppdatere `docker-compose.yml`**: Vi oppdaterer `docker-compose.yml` filen til å inkludere volumet. Dette sikrer at dataene i MongoDB-databasen vedvares mellom kontainerkjøringer.
+1. **Volumer**: Vi legger til et volum for å vedvare dataene i MySQL-databasen. Volumer er en måte å lagre data utenfor kontainerens filsystem, slik at dataene ikke går tapt når kontaineren stoppes eller slettes.
+2. **Oppdatere `docker-compose.yml`**: Vi oppdaterer `docker-compose.yml` filen til å inkludere volumet. Dette sikrer at dataene i MySQL-databasen vedvares mellom kontainerkjøringer.
 
 </details>
 
@@ -318,26 +349,30 @@ Skaler web-tjenesten til å kjøre flere instanser.
 ```yaml
 version: '3'
 services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
-    deploy:
-      replicas: 3
-  db:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+    web:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            - MYSQL_URL=mysql://db:3306
+            - MYSQL_DB=mydatabase
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=example
+        deploy:
+            replicas: 3
+    db:
+        image: mysql
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=example
+        volumes:
+            - mysql-data:/var/lib/mysql
 
 volumes:
-  mongo-data:
+    mysql-data:
 ```
 
 **Forklaring:**
@@ -359,31 +394,35 @@ Legg til en helsekontroll for web-tjenesten.
 ```yaml
 version: '3'
 services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
-    deploy:
-      replicas: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-  db:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+    web:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            - MYSQL_URL=mysql://db:3306
+            - MYSQL_DB=mydatabase
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=example
+        deploy:
+            replicas: 3
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+    db:
+        image: mysql
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=example
+        volumes:
+            - mysql-data:/var/lib/mysql
 
 volumes:
-  mongo-data:
+    mysql-data:
 ```
 
 **Forklaring:**
@@ -398,37 +437,39 @@ volumes:
 > [!IMPORTANT]  
 > Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.
 
-I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden nedenfor er ment å sette opp en enkel Node.js-applikasjon som kobler til en MongoDB-database og returnerer en melding fra databasen. Men det er en feil i konfigurasjonen som forhindrer applikasjonen fra å kjøre riktig.
+I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden nedenfor er ment å sette opp en enkel Node.js-applikasjon som kobler til en MySQL-database og returnerer en melding fra databasen. Men det er en feil i konfigurasjonen som forhindrer applikasjonen fra å kjøre riktig.
 
 ```javascript
 // app.js
 const http = require('http');
-const MongoClient = require('mongodb').MongoClient;
+const mysql = require('mysql2');
 
 const hostname = '0.0.0.0';
 const port = 8080;
-const url = 'mongodb://db:27017';
-const dbName = 'mydatabase';
+const connection = mysql.createConnection({
+    host: 'db',
+    user: 'root',
+    password: 'example',
+    database: 'mydatabase'
+});
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
-  if (err) throw err;
+connection.connect((err) => {
+    if (err) throw err;
+    console.log('Connected to database');
 
-  const db = client.db(dbName);
-  console.log(`Connected to database ${dbName}`);
+    const server = http.createServer((req, res) => {
+        connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
+            if (err) throw err;
 
-  const server = http.createServer((req, res) => {
-    db.collection('messages').findOne({}, (err, result) => {
-      if (err) throw err;
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/plain');
-      res.end(result.message);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end(result[0].message);
+        });
     });
-  });
 
-  server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
-  });
+    server.listen(port, hostname, () => {
+        console.log(`Server running at http://${hostname}:${port}/`);
+    });
 });
 ```
 
@@ -460,24 +501,28 @@ CMD ["node", "app.js"]
 ```yaml
 version: '3'
 services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
-  db:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+    web:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            - MYSQL_URL=mysql://db:3306
+            - MYSQL_DB=mydatabase
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=example
+    db:
+        image: mysql
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=example
+        volumes:
+            - mysql-data:/var/lib/mysql
 
 volumes:
-  mongo-data:
+    mysql-data:
 ```
 
 **Forklaring:**
@@ -487,24 +532,44 @@ volumes:
 
 **Løsningsforslag:**
 
-Feilen i konfigurasjonen ligger i at databasen ikke inneholder noen dokumenter i `messages`-samlingen ved oppstart. For å rette opp dette, kan vi legge til et skript som initialiserer databasen med en melding.
+Feilen i konfigurasjonen ligger i at databasen ikke inneholder noen rader i `messages`-tabellen ved oppstart. For å rette opp dette, kan vi legge til et skript som initialiserer databasen med en melding.
 
 ```javascript
 // init-db.js
-const MongoClient = require('mongodb').MongoClient;
+const mysql = require('mysql2');
 
-const url = 'mongodb://db:27017';
-const dbName = 'mydatabase';
+const connection = mysql.createConnection({
+    host: 'db',
+    user: 'root',
+    password: 'example',
+    database: 'mydatabase'
+});
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
-  if (err) throw err;
-
-  const db = client.db(dbName);
-  db.collection('messages').insertOne({ message: 'Hello from MongoDB' }, (err, res) => {
+connection.connect((err) => {
     if (err) throw err;
-    console.log('Database initialized');
-    client.close();
-  });
+    console.log('Connected to database');
+
+    const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            message VARCHAR(255) NOT NULL
+        )
+    `;
+
+    connection.query(createTableQuery, (err, result) => {
+        if (err) throw err;
+
+        const insertMessageQuery = `
+            INSERT INTO messages (message)
+            VALUES ('Hello from MySQL')
+        `;
+
+        connection.query(insertMessageQuery, (err, result) => {
+            if (err) throw err;
+            console.log('Database initialized');
+            connection.end();
+        });
+    });
 });
 ```
 
@@ -513,30 +578,35 @@ Oppdater `docker-compose.yml` til å kjøre initialiseringsskriptet før applika
 ```yaml
 version: '3'
 services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - MONGO_URL=mongodb://db:27017
-      - MONGO_DB=mydatabase
-    command: ["sh", "-c", "node init-db.js && node app.js"]
-  db:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+    web:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            - MYSQL_URL=mysql://db:3306
+            - MYSQL_DB=mydatabase
+            - MYSQL_USER=root
+            - MYSQL_PASSWORD=example
+        command: ["sh", "-c", "node init-db.js && node app.js"]
+    db:
+        image: mysql
+        ports:
+            - "3306:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=example
+        volumes:
+            - mysql-data:/var/lib/mysql
 
 volumes:
-  mongo-data:
+    mysql-data:
 ```
 
 Nå vil databasen bli initialisert med en melding før applikasjonen starter, og applikasjonen vil kunne returnere meldingen fra databasen.
 
 </details>
 
+-e 
 
 

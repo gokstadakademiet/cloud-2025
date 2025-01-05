@@ -1,6 +1,18 @@
 # Oppgavesett: Docker og docker-compose
 # Innholdsfortegnelse 
 
+1. [Opprette en enkel Docker-kontainer](#oppgave-1-opprette-en-enkel-docker-kontainer)
+2. [Bygge og kjøre Docker-kontaineren](#oppgave-2-bygge-og-kjøre-docker-kontaineren)
+3. [Bruke Docker Compose](#oppgave-3-bruke-docker-compose)
+4. [Kjør applikasjonen med Docker Compose](#oppgave-4-kjør-applikasjonen-med-docker-compose)
+5. [Legge til en database](#oppgave-5-legge-til-en-database)
+6. [Koble applikasjonen til databasen](#oppgave-6-koble-applikasjonen-til-databasen)
+7. [Miljøvariabler](#oppgave-7-miljøvariabler)
+8. [Volumer](#oppgave-8-volumer)
+9. [Skalerbarhet](#oppgave-9-skalerbarhet)
+10. [Helsekontroll](#oppgave-10-helsekontroll)
+11. [Feilsøking](#oppgave-11-feilsøking)
+
 
 ## Introduksjon til Docker
 
@@ -59,15 +71,15 @@ Kjør applikasjonen ved hjelp av Docker Compose.
 > [!CAUTION]  
 > Sørg for at du har nok ressurser på maskinen din til å kjøre både web-tjenesten og databasen.
 
-Utvid `docker-compose.yml` filen til å inkludere en MongoDB-database.
+Utvid `docker-compose.yml` filen til å inkludere en MySQL-database.
 
 
 ### **Oppgave 6: Koble applikasjonen til databasen**
 
 > [!NOTE]  
-> Sørg for at MongoDB-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
+> Sørg for at MySQL-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
 
-Oppdater Node.js-applikasjonen til å koble til MongoDB-databasen.
+Oppdater Node.js-applikasjonen til å koble til MySQL-databasen.
 
 
 ### **Oppgave 7: Miljøvariabler**
@@ -78,12 +90,13 @@ Oppdater Node.js-applikasjonen til å koble til MongoDB-databasen.
 Bruk miljøvariabler for å konfigurere databaseforbindelsen.
 
 
+
 ### **Oppgave 8: Volumer**
 
 > [!IMPORTANT]  
 > Volumer sikrer at dataene dine vedvares selv om kontaineren stoppes eller slettes.
 
-Legg til et volum for å vedvare dataene i MongoDB-databasen.
+Legg til et volum for å vedvare dataene i MySQL-databasen.
 
 
 ### **Oppgave 9: Skalerbarhet**
@@ -107,40 +120,43 @@ Legg til en helsekontroll for web-tjenesten.
 > [!IMPORTANT]  
 > Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.
 
-I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden nedenfor er ment å sette opp en enkel Node.js-applikasjon som kobler til en MongoDB-database og returnerer en melding fra databasen. Men det er en feil i konfigurasjonen som forhindrer applikasjonen fra å kjøre riktig.
+I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden nedenfor er ment å sette opp en enkel Node.js-applikasjon som kobler til en MySQL-database og returnerer en melding fra databasen. Men det er en feil i konfigurasjonen som forhindrer applikasjonen fra å kjøre riktig.
 
 ```javascript
 // app.js
 const http = require('http');
-const MongoClient = require('mongodb').MongoClient;
+const mysql = require('mysql2');
 
 const hostname = '0.0.0.0';
 const port = 8080;
-const url = 'mongodb://db:27017';
-const dbName = 'mydatabase';
+const connection = mysql.createConnection({
+    host: 'db',
+    user: 'root',
+    password: 'example',
+    database: 'mydatabase'
+});
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
-  if (err) throw err;
+connection.connect((err) => {
+    if (err) throw err;
+    console.log('Connected to database');
 
-  const db = client.db(dbName);
-  console.log(`Connected to database ${dbName}`);
+    const server = http.createServer((req, res) => {
+        connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
+            if (err) throw err;
 
-  const server = http.createServer((req, res) => {
-    db.collection('messages').findOne({}, (err, result) => {
-      if (err) throw err;
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/plain');
-      res.end(result.message);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end(result[0].message);
+        });
     });
-  });
 
-  server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
-  });
+    server.listen(port, hostname, () => {
+        console.log(`Server running at http://${hostname}:${port}/`);
+    });
 });
 ```
 
 
+-e 
 
 
