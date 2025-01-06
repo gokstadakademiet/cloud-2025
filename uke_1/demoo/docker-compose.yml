@@ -1,0 +1,37 @@
+version: '3'
+services:
+  web: 
+    build: .
+    ports:
+      - "8080:8080"
+    environment: 
+      MYSQL_HOST: db
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+      MYSQL_DATABASE: exampledb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on: 
+      db:
+        condition: service_healthy
+  db:
+    image: hello-world:1.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+    ports: 
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+volumes:
+  mysql-data:
