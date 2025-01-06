@@ -147,31 +147,38 @@ docker-compose up
 > [!CAUTION]  
 > Sørg for at du har nok ressurser på maskinen din til å kjøre både web-tjenesten og databasen.
 
-Utvid `docker-compose.yml` filen til å inkludere en MySQL-database.
+Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å legge til en helsesjekk for å være sikker på at databasen har startet før webserveren spinnes opp.
 
 <details><summary>Løsning</summary>
 
 ```yaml
 version: '3'
 services:
-  web:
+  web: 
     build: .
     ports:
       - "8080:8080"
-    depends_on:
-      - db
+    depends_on: 
+      db:
+        condition: service_healthy
   db:
-    image: mysql:8
+    image: mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: example
-    ports:
+    ports: 
       - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 ```
 
 **Forklaring:**
 
 1. **Legge til en database**: Vi legger til en MySQL-tjeneste i `docker-compose.yml` filen. MySQL er en populær relasjonsdatabase.
-2. **depends_on**: Dette sikrer at MySQL-tjenesten starter før web-tjenesten. Dette er viktig for å sikre at databasen er tilgjengelig når web-applikasjonen prøver å koble til den.
+2. **depends_on med helsesjekk**: Vi bruker `depends_on` med `condition: service_healthy` for å sikre at web-tjenesten kun starter når MySQL-tjenesten er sunn. Dette er viktig for å sikre at databasen er tilgjengelig når web-applikasjonen prøver å koble til den.
+3. **Helsesjekk**: Vi legger til en `healthcheck` for MySQL-tjenesten som bruker `mysqladmin ping` for å sjekke om databasen er oppe og kjører. Dette sikrer at web-tjenesten ikke starter før databasen er klar.
 
 </details>
 
@@ -187,22 +194,27 @@ Oppdater Node.js-applikasjonen til å koble til MySQL-databasen.
 ```javascript
 // app.js
 const http = require('http');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 const hostname = '0.0.0.0';
 const port = 8080;
 const dbConfig = {
   host: 'db',
-  user: 'root',
-  password: 'example',
-  database: 'mydatabase'
+  user: 'exampleuser',
+  password: 'examplepass',
+  database: 'exampledb',
+  port: 3306,
 };
 
 const connection = mysql.createConnection(dbConfig);
 
-connection.connect(err => {
-  if (err) throw err;
-  console.log('Connected to MySQL database');
+connection.connect((err) => {
+  if (err) {
+    console.error('Failed to connect to database', err);
+    throw err;
+  }
+
+  console.log(`Connected to database ${dbConfig.database}`);
 
   const server = http.createServer((req, res) => {
     res.statusCode = 200;
@@ -235,23 +247,33 @@ Bruk miljøvariabler for å konfigurere databaseforbindelsen.
 ```yaml
 version: '3'
 services:
-  web:
+  web: 
     build: .
     ports:
       - "8080:8080"
-    depends_on:
-      - db
     environment:
-      - MYSQL_HOST=db
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=example
-      - MYSQL_DATABASE=mydatabase
+      MYSQL_HOST: db
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+      MYSQL_DATABASE: exampledb
+    depends_on: 
+      db:
+        condition: service_healthy
+      
   db:
-    image: mysql:8
+    image: mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: example
-    ports:
+      # MYSQL_DATABASE: exampledb
+      # MYSQL_USER: exampleuser
+      # MYSQL_PASSWORD: examplepass
+    ports: 
       - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 ```
 
 ```javascript
@@ -265,14 +287,19 @@ const dbConfig = {
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE
+  database: process.env.MYSQL_DATABASE,
+  port: 3306
 };
 
 const connection = mysql.createConnection(dbConfig);
 
-connection.connect(err => {
-  if (err) throw err;
-  console.log(`Connected to MySQL database ${process.env.MYSQL_DATABASE}`);
+connection.connect((err) => {
+  if (err) {
+    console.error('Failed to connect to database', err);
+    throw err;
+  }
+
+  console.log(`Connected to database ${dbConfig.database}`);
 
   const server = http.createServer((req, res) => {
     res.statusCode = 200;
@@ -291,7 +318,7 @@ connection.connect(err => {
 1. **Miljøvariabler**: Vi bruker miljøvariabler for å konfigurere databaseforbindelsen. Miljøvariabler er en måte å konfigurere applikasjoner på uten å hardkode verdier i kildekoden.
 2. **Oppdatere applikasjonen**: Vi oppdaterer applikasjonen til å bruke miljøvariablene. Dette gjør applikasjonen mer fleksibel og enklere å konfigurere i forskjellige miljøer.
 
-</details>-e 
+</details>
 
 
 ### **Oppgave 8: Volumer**
@@ -442,7 +469,7 @@ I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden
 ```javascript
 // app.js
 const http = require('http');
-const mysql = require('mysql2');
+const mysql = require('mysql');
 
 const hostname = '0.0.0.0';
 const port = 8080;
@@ -536,7 +563,7 @@ Feilen i konfigurasjonen ligger i at databasen ikke inneholder noen rader i `mes
 
 ```javascript
 // init-db.js
-const mysql = require('mysql2');
+const mysql = require('mysql');
 
 const connection = mysql.createConnection({
     host: 'db',
@@ -607,6 +634,6 @@ Nå vil databasen bli initialisert med en melding før applikasjonen starter, og
 
 </details>
 
--e 
+
 
 

@@ -71,7 +71,7 @@ Kjør applikasjonen ved hjelp av Docker Compose.
 > [!CAUTION]  
 > Sørg for at du har nok ressurser på maskinen din til å kjøre både web-tjenesten og databasen.
 
-Utvid `docker-compose.yml` filen til å inkludere en MySQL-database.
+Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å legge til en helsesjekk for å være sikker på at databasen har startet før webserveren spinnes opp.
 
 
 ### **Oppgave 6: Koble applikasjonen til databasen**
@@ -125,7 +125,7 @@ I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden
 ```javascript
 // app.js
 const http = require('http');
-const mysql = require('mysql2');
+const mysql = require('mysql');
 
 const hostname = '0.0.0.0';
 const port = 8080;
@@ -157,6 +157,6 @@ connection.connect((err) => {
 ```
 
 
--e 
+
 
 

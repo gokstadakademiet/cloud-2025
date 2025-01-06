@@ -27,5 +27,5 @@ echo "# Innholdsfortegnelse
 
 for md_file in $(ls "$SOURCE_DIR"/*.md | sort); do
     sed 's/^[[:space:]]*>/>/' "$md_file" >> "$TARGET_FILE"
-    echo -e "\n\n" >> "$TARGET_FILE"
+    echo "\n\n" >> "$TARGET_FILE"
 done
