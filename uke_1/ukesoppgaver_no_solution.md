@@ -74,12 +74,13 @@ Kjør applikasjonen ved hjelp av Docker Compose.
 Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å legge til en helsesjekk for å være sikker på at databasen har startet før webserveren spinnes opp.
 
 
-### **Oppgave 6: Logge inn i databasen**
+
+### **Oppgave 6: Logge inn i databasen og verifiser at brukeren `exampleuser` er opprettet**
 
 > [!TIP]  
 > Bruk MySQL-klienten til å logge inn i databasen som rot-brukeren og kjøre `SHOW DATABASES`.
 
-Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser.
+Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser. Verifiser også at brukeren `exampleuser` eksisterer i databasen.
 
 
 
@@ -100,7 +101,7 @@ Bruk miljøvariabler for å konfigurere databaseforbindelsen.
 
 
 
-### **Oppgave 8: Volumer**
+### **Oppgave 9: Volumer**
 
 > [!IMPORTANT]  
 > Volumer sikrer at dataene dine vedvares selv om kontaineren stoppes eller slettes.
@@ -108,7 +109,7 @@ Bruk miljøvariabler for å konfigurere databaseforbindelsen.
 Legg til et volum for å vedvare dataene i MySQL-databasen.
 
 
-### **Oppgave 9: Skalerbarhet**
+<!-- ### **Oppgave 10: Skalerbarhet**
 
 > [!TIP]  
 > Skalerbarhet lar deg håndtere flere forespørsler ved å kjøre flere instanser av web-tjenesten.
@@ -124,7 +125,7 @@ Skaler web-tjenesten til å kjøre flere instanser.
 Legg til en helsekontroll for web-tjenesten.
 
 
-### **Oppgave 11: Feilsøking**
+### **Oppgave 12: Feilsøking**
 
 > [!IMPORTANT]  
 > Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.
@@ -134,16 +135,19 @@ I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden
 ```javascript
 // app.js
 const http = require('http');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 const hostname = '0.0.0.0';
 const port = 8080;
-const connection = mysql.createConnection({
-        host: 'db',
-        user: 'exampleuser',
-        password: 'examplepass',
-        database: 'exampledb'
-});
+const dbConfig = {
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port: 3306
+};
+
+const connection = mysql.createConnection(dbConfig);
 
 connection.connect((err) => {
         if (err) throw err;

@@ -29,7 +29,7 @@ server.listen(port, hostname, () => {
 
 ```dockerfile
 # Bruk et offisielt Docker-bilde for Node.js
-FROM node:14
+FROM node:20
 
 # Opprett en arbeidskatalog
 WORKDIR /usr/src/app
@@ -149,6 +149,9 @@ services:
     image: mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
     ports: 
       - "3306:3306"
     healthcheck:
@@ -163,15 +166,17 @@ services:
 1. **Legge til en database**: Vi legger til en MySQL-tjeneste i `docker-compose.yml` filen. MySQL er en populær relasjonsdatabase.
 2. **depends_on med helsesjekk**: Vi bruker `depends_on` med `condition: service_healthy` for å sikre at web-tjenesten kun starter når MySQL-tjenesten er sunn. Dette er viktig for å sikre at databasen er tilgjengelig når web-applikasjonen prøver å koble til den.
 3. **Helsesjekk**: Vi legger til en `healthcheck` for MySQL-tjenesten som bruker `mysqladmin ping` for å sjekke om databasen er oppe og kjører. Dette sikrer at web-tjenesten ikke starter før databasen er klar.
+4. **Automatisk opprettelse av bruker**: Når miljøvariablene `MYSQL_DATABASE`, `MYSQL_USER`, og `MYSQL_PASSWORD` er satt, vil MySQL automatisk opprette databasen og brukeren med de spesifiserte verdiene. Dette gjør det enkelt å sette opp en ny database med en bruker uten ekstra konfigurasjon.
 
 </details>
 
-### **Oppgave 6: Logge inn i databasen**
+
+### **Oppgave 6: Logge inn i databasen og verifiser at brukeren `exampleuser` er opprettet**
 
 > [!TIP]  
 > Bruk MySQL-klienten til å logge inn i databasen som rot-brukeren og kjøre `SHOW DATABASES`.
 
-Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser.
+Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser. Verifiser også at brukeren `exampleuser` eksisterer i databasen.
 
 <details><summary>Løsning</summary>
 
@@ -184,6 +189,9 @@ mysql -u root -pexample
 
 # Kjør kommandoen for å vise alle databaser
 SHOW DATABASES;
+
+# Verifiser at brukeren 'exampleuser' eksisterer
+SELECT User FROM mysql.user;
 ```
 
 **Forklaring:**
@@ -191,6 +199,7 @@ SHOW DATABASES;
 1. **Åpne en shell-session**: Vi bruker `docker exec` kommandoen for å åpne en shell-session inne i databasekontaineren. Dette lar oss kjøre kommandoer direkte i kontaineren.
 2. **Logge inn i databasen**: Når vi er inne i kontaineren, bruker vi MySQL-klienten til å logge inn i databasen som rot-brukeren.
 3. **Kjøre `SHOW DATABASES`**: Når vi er logget inn, kjører vi `SHOW DATABASES` kommandoen for å vise alle tilgjengelige databaser. Dette er nyttig for å verifisere at databasen er riktig konfigurert og kjører som forventet.
+4. **Verifisere brukeren**: Vi kjører en SQL-forespørsel for å sjekke at brukeren `exampleuser` eksisterer i databasen. Dette sikrer at brukeren er opprettet og kan brukes til å koble til databasen.
 
 </details>
 
@@ -230,9 +239,17 @@ connection.connect((err) => {
   console.log(`Connected to database ${dbConfig.database}`);
 
   const server = http.createServer((req, res) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello World');
+    if (req.url === '/') {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end('Hello world');
+    }
+  
+    else {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('Not found');
+    }
   });
 
   server.listen(port, hostname, () => {
@@ -315,9 +332,17 @@ connection.connect((err) => {
   console.log(`Connected to database ${dbConfig.database}`);
 
   const server = http.createServer((req, res) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello World');
+    if (req.url === '/') {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end('Hello world');
+    }
+  
+    else {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('Not found');
+    }
   });
 
   server.listen(port, hostname, () => {
