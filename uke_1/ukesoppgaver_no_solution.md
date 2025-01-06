@@ -12,6 +12,8 @@
 9. [Volumer](#oppgave-9-volumer)
 10. [Helsekontroll](#oppgave-10-helsekontroll)
 11. [Feilsøking](#oppgave-11-feilsøking)
+12. [Pushe Docker Image til Docker Hub](#oppgave-12-pushe-docker-image-til-docker-hub)
+13. [Pulle Docker Image fra Docker Hub](#oppgave-13-pulle-docker-image-fra-docker-hub)
 
 
 ## Introduksjon til Docker
@@ -169,6 +171,23 @@ connection.connect((err) => {
 });
 ```
 
+
+
+
+### **Oppgave 12: Pushe Docker Image til Docker Hub**
+
+> [!TIP]  
+> Å pushe Docker images til Docker Hub gjør det enkelt å dele og distribuere applikasjonene dine.
+
+I denne oppgaven skal vi pushe Docker imaget for web-containeren til Docker Hub.
+
+
+### **Oppgave 13: Pulle Docker Image fra Docker Hub**
+
+> [!TIP]  
+> Å pulle Docker images fra Docker Hub gjør det enkelt å sette opp applikasjoner uten å måtte bygge dem lokalt.
+
+I denne oppgaven skal vi pulle Docker imaget for web-containeren fra Docker Hub og bruke det i en `docker-compose`-fil.
 
 
 

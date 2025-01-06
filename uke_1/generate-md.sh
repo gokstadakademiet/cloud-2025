@@ -21,6 +21,8 @@ echo "# Innholdsfortegnelse
 9. [Volumer](#oppgave-9-volumer)
 10. [Helsekontroll](#oppgave-10-helsekontroll)
 11. [Feilsøking](#oppgave-11-feilsøking)
+12. [Pushe Docker Image til Docker Hub](#oppgave-12-pushe-docker-image-til-docker-hub)
+13. [Pulle Docker Image fra Docker Hub](#oppgave-13-pulle-docker-image-fra-docker-hub)
 
 " >> "$TARGET_FILE"
 
