@@ -166,7 +166,36 @@ services:
 
 </details>
 
-### **Oppgave 6: Koble applikasjonen til databasen**
+### **Oppgave 6: Logge inn i databasen**
+
+> [!TIP]  
+> Bruk MySQL-klienten til å logge inn i databasen som rot-brukeren og kjøre `SHOW DATABASES`.
+
+Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser.
+
+<details><summary>Løsning</summary>
+
+```bash
+# Åpne en shell-session i databasekontaineren
+docker exec -it <db_container_name> /bin/sh
+
+# Logg inn i MySQL-databasen som rot-brukeren
+mysql -u root -pexample
+
+# Kjør kommandoen for å vise alle databaser
+SHOW DATABASES;
+```
+
+**Forklaring:**
+
+1. **Åpne en shell-session**: Vi bruker `docker exec` kommandoen for å åpne en shell-session inne i databasekontaineren. Dette lar oss kjøre kommandoer direkte i kontaineren.
+2. **Logge inn i databasen**: Når vi er inne i kontaineren, bruker vi MySQL-klienten til å logge inn i databasen som rot-brukeren.
+3. **Kjøre `SHOW DATABASES`**: Når vi er logget inn, kjører vi `SHOW DATABASES` kommandoen for å vise alle tilgjengelige databaser. Dette er nyttig for å verifisere at databasen er riktig konfigurert og kjører som forventet.
+
+</details>
+
+
+### **Oppgave 7: Koble applikasjonen til databasen**
 
 > [!NOTE]  
 > Sørg for at MySQL-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
@@ -219,7 +248,7 @@ connection.connect((err) => {
 
 </details>
 
-### **Oppgave 7: Miljøvariabler**
+### **Oppgave 8: Miljøvariabler**
 
 > [!TIP]  
 > Bruk av miljøvariabler gjør applikasjonen mer fleksibel og enklere å konfigurere i forskjellige miljøer.

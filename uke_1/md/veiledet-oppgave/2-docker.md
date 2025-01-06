@@ -10,25 +10,32 @@ Legg til et volum for å vedvare dataene i MySQL-databasen.
 ```yaml
 version: '3'
 services:
-    web:
+    web: 
         build: .
         ports:
             - "8080:8080"
-        depends_on:
-            - db
         environment:
-            - MYSQL_URL=mysql://db:3306
-            - MYSQL_DB=mydatabase
-            - MYSQL_USER=root
-            - MYSQL_PASSWORD=example
+            MYSQL_HOST: db
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_DATABASE: exampledb
+        depends_on: 
+            db:
+                condition: service_healthy
+            
     db:
-        image: mysql
-        ports:
-            - "3306:3306"
+        image: mysql:latest
         environment:
-            - MYSQL_ROOT_PASSWORD=example
+            MYSQL_ROOT_PASSWORD: example
+        ports: 
+            - "3306:3306"
         volumes:
             - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
 volumes:
     mysql-data:
@@ -53,27 +60,34 @@ Skaler web-tjenesten til å kjøre flere instanser.
 ```yaml
 version: '3'
 services:
-    web:
+    web: 
         build: .
         ports:
             - "8080:8080"
-        depends_on:
-            - db
         environment:
-            - MYSQL_URL=mysql://db:3306
-            - MYSQL_DB=mydatabase
-            - MYSQL_USER=root
-            - MYSQL_PASSWORD=example
+            MYSQL_HOST: db
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_DATABASE: exampledb
+        depends_on: 
+            db:
+                condition: service_healthy
         deploy:
             replicas: 3
+            
     db:
-        image: mysql
-        ports:
-            - "3306:3306"
+        image: mysql:latest
         environment:
-            - MYSQL_ROOT_PASSWORD=example
+            MYSQL_ROOT_PASSWORD: example
+        ports: 
+            - "3306:3306"
         volumes:
             - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
 volumes:
     mysql-data:
@@ -98,17 +112,18 @@ Legg til en helsekontroll for web-tjenesten.
 ```yaml
 version: '3'
 services:
-    web:
+    web: 
         build: .
         ports:
             - "8080:8080"
-        depends_on:
-            - db
         environment:
-            - MYSQL_URL=mysql://db:3306
-            - MYSQL_DB=mydatabase
-            - MYSQL_USER=root
-            - MYSQL_PASSWORD=example
+            MYSQL_HOST: db
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_DATABASE: exampledb
+        depends_on: 
+            db:
+                condition: service_healthy
         deploy:
             replicas: 3
         healthcheck:
@@ -116,14 +131,20 @@ services:
             interval: 30s
             timeout: 10s
             retries: 3
+            
     db:
-        image: mysql
-        ports:
-            - "3306:3306"
+        image: mysql:latest
         environment:
-            - MYSQL_ROOT_PASSWORD=example
+            MYSQL_ROOT_PASSWORD: example
+        ports: 
+            - "3306:3306"
         volumes:
             - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
 volumes:
     mysql-data:
@@ -151,29 +172,29 @@ const mysql = require('mysql');
 const hostname = '0.0.0.0';
 const port = 8080;
 const connection = mysql.createConnection({
-    host: 'db',
-    user: 'root',
-    password: 'example',
-    database: 'mydatabase'
+        host: 'db',
+        user: 'exampleuser',
+        password: 'examplepass',
+        database: 'exampledb'
 });
 
 connection.connect((err) => {
-    if (err) throw err;
-    console.log('Connected to database');
+        if (err) throw err;
+        console.log('Connected to database');
 
-    const server = http.createServer((req, res) => {
-        connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
-            if (err) throw err;
+        const server = http.createServer((req, res) => {
+                connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
+                        if (err) throw err;
 
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'text/plain');
-            res.end(result[0].message);
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'text/plain');
+                        res.end(result[0].message);
+                });
         });
-    });
 
-    server.listen(port, hostname, () => {
-        console.log(`Server running at http://${hostname}:${port}/`);
-    });
+        server.listen(port, hostname, () => {
+                console.log(`Server running at http://${hostname}:${port}/`);
+        });
 });
 ```
 
@@ -205,25 +226,33 @@ CMD ["node", "app.js"]
 ```yaml
 version: '3'
 services:
-    web:
+    web: 
         build: .
         ports:
             - "8080:8080"
-        depends_on:
-            - db
         environment:
-            - MYSQL_URL=mysql://db:3306
-            - MYSQL_DB=mydatabase
-            - MYSQL_USER=root
-            - MYSQL_PASSWORD=example
+            MYSQL_HOST: db
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_DATABASE: exampledb
+        depends_on: 
+            db:
+                condition: service_healthy
+        command: ["sh", "-c", "node init-db.js && node app.js"]
+            
     db:
-        image: mysql
-        ports:
-            - "3306:3306"
+        image: mysql:latest
         environment:
-            - MYSQL_ROOT_PASSWORD=example
+            MYSQL_ROOT_PASSWORD: example
+        ports: 
+            - "3306:3306"
         volumes:
             - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
 volumes:
     mysql-data:
@@ -243,37 +272,37 @@ Feilen i konfigurasjonen ligger i at databasen ikke inneholder noen rader i `mes
 const mysql = require('mysql');
 
 const connection = mysql.createConnection({
-    host: 'db',
-    user: 'root',
-    password: 'example',
-    database: 'mydatabase'
+        host: 'db',
+        user: 'exampleuser',
+        password: 'examplepass',
+        database: 'exampledb'
 });
 
 connection.connect((err) => {
-    if (err) throw err;
-    console.log('Connected to database');
-
-    const createTableQuery = `
-        CREATE TABLE IF NOT EXISTS messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            message VARCHAR(255) NOT NULL
-        )
-    `;
-
-    connection.query(createTableQuery, (err, result) => {
         if (err) throw err;
+        console.log('Connected to database');
 
-        const insertMessageQuery = `
-            INSERT INTO messages (message)
-            VALUES ('Hello from MySQL')
+        const createTableQuery = `
+                CREATE TABLE IF NOT EXISTS messages (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        message VARCHAR(255) NOT NULL
+                )
         `;
 
-        connection.query(insertMessageQuery, (err, result) => {
-            if (err) throw err;
-            console.log('Database initialized');
-            connection.end();
+        connection.query(createTableQuery, (err, result) => {
+                if (err) throw err;
+
+                const insertMessageQuery = `
+                        INSERT INTO messages (message)
+                        VALUES ('Hello from MySQL')
+                `;
+
+                connection.query(insertMessageQuery, (err, result) => {
+                        if (err) throw err;
+                        console.log('Database initialized');
+                        connection.end();
+                });
         });
-    });
 });
 ```
 
@@ -282,26 +311,33 @@ Oppdater `docker-compose.yml` til å kjøre initialiseringsskriptet før applika
 ```yaml
 version: '3'
 services:
-    web:
+    web: 
         build: .
         ports:
             - "8080:8080"
-        depends_on:
-            - db
         environment:
-            - MYSQL_URL=mysql://db:3306
-            - MYSQL_DB=mydatabase
-            - MYSQL_USER=root
-            - MYSQL_PASSWORD=example
+            MYSQL_HOST: db
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_DATABASE: exampledb
+        depends_on: 
+            db:
+                condition: service_healthy
         command: ["sh", "-c", "node init-db.js && node app.js"]
+            
     db:
-        image: mysql
-        ports:
-            - "3306:3306"
+        image: mysql:latest
         environment:
-            - MYSQL_ROOT_PASSWORD=example
+            MYSQL_ROOT_PASSWORD: example
+        ports: 
+            - "3306:3306"
         volumes:
             - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
 volumes:
     mysql-data:
@@ -310,4 +346,3 @@ volumes:
 Nå vil databasen bli initialisert med en melding før applikasjonen starter, og applikasjonen vil kunne returnere meldingen fra databasen.
 
 </details>
-

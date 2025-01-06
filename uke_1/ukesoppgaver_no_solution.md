@@ -74,7 +74,16 @@ Kjør applikasjonen ved hjelp av Docker Compose.
 Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å legge til en helsesjekk for å være sikker på at databasen har startet før webserveren spinnes opp.
 
 
-### **Oppgave 6: Koble applikasjonen til databasen**
+### **Oppgave 6: Logge inn i databasen**
+
+> [!TIP]  
+> Bruk MySQL-klienten til å logge inn i databasen som rot-brukeren og kjøre `SHOW DATABASES`.
+
+Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser.
+
+
+
+### **Oppgave 7: Koble applikasjonen til databasen**
 
 > [!NOTE]  
 > Sørg for at MySQL-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
@@ -82,7 +91,7 @@ Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å leg
 Oppdater Node.js-applikasjonen til å koble til MySQL-databasen.
 
 
-### **Oppgave 7: Miljøvariabler**
+### **Oppgave 8: Miljøvariabler**
 
 > [!TIP]  
 > Bruk av miljøvariabler gjør applikasjonen mer fleksibel og enklere å konfigurere i forskjellige miljøer.
@@ -130,32 +139,31 @@ const mysql = require('mysql');
 const hostname = '0.0.0.0';
 const port = 8080;
 const connection = mysql.createConnection({
-    host: 'db',
-    user: 'root',
-    password: 'example',
-    database: 'mydatabase'
+        host: 'db',
+        user: 'exampleuser',
+        password: 'examplepass',
+        database: 'exampledb'
 });
 
 connection.connect((err) => {
-    if (err) throw err;
-    console.log('Connected to database');
+        if (err) throw err;
+        console.log('Connected to database');
 
-    const server = http.createServer((req, res) => {
-        connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
-            if (err) throw err;
+        const server = http.createServer((req, res) => {
+                connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
+                        if (err) throw err;
 
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'text/plain');
-            res.end(result[0].message);
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'text/plain');
+                        res.end(result[0].message);
+                });
         });
-    });
 
-    server.listen(port, hostname, () => {
-        console.log(`Server running at http://${hostname}:${port}/`);
-    });
+        server.listen(port, hostname, () => {
+                console.log(`Server running at http://${hostname}:${port}/`);
+        });
 });
 ```
-
 
 
 
