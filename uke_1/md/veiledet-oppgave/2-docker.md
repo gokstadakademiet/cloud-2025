@@ -161,7 +161,7 @@ volumes:
 
 </details>
 
-### **Oppgave 12: Feilsøking**
+### **Oppgave 11: Feilsøking**
 
 > [!IMPORTANT]  
 > Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.

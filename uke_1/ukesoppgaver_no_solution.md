@@ -6,10 +6,10 @@
 3. [Bruke Docker Compose](#oppgave-3-bruke-docker-compose)
 4. [Kjør applikasjonen med Docker Compose](#oppgave-4-kjør-applikasjonen-med-docker-compose)
 5. [Legge til en database](#oppgave-5-legge-til-en-database)
-6. [Koble applikasjonen til databasen](#oppgave-6-koble-applikasjonen-til-databasen)
-7. [Miljøvariabler](#oppgave-7-miljøvariabler)
-8. [Volumer](#oppgave-8-volumer)
-9. [Skalerbarhet](#oppgave-9-skalerbarhet)
+6. [Logge inn i databasen og verifiser at brukeren exampleuser er opprettet](#oppgave-6-logge-inn-i-databasen-og-verifiser-at-brukeren-exampleuser-er-opprettet)
+7. [Koble applikasjonen til databasen](#oppgave-7-koble-applikasjonen-til-databasen)
+8. [Miljøvariabler](#oppgave-8-miljøvariabler)
+9. [Volumer](#oppgave-9-volumer)
 10. [Helsekontroll](#oppgave-10-helsekontroll)
 11. [Feilsøking](#oppgave-11-feilsøking)
 
@@ -125,7 +125,7 @@ Skaler web-tjenesten til å kjøre flere instanser.
 Legg til en helsekontroll for web-tjenesten.
 
 
-### **Oppgave 12: Feilsøking**
+### **Oppgave 11: Feilsøking**
 
 > [!IMPORTANT]  
 > Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.
