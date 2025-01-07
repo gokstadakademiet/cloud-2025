@@ -18,6 +18,123 @@
 
 ## Introduksjon til Docker
 
+### Før du starter
+
+For å komme i gang med Docker, må du først installere noen nødvendige verktøy. Sørg for at du har følgende installert på maskinen din før du starter:
+
+1. **Docker Desktop**: Dette er en applikasjon som gjør det enkelt å bygge, kjøre og dele applikasjoner med Docker. Du kan laste ned og installere Docker Desktop fra [Docker sin offisielle nettside](https://www.docker.com/products/docker-desktop).
+
+2. **Docker Compose**: Dette verktøyet følger vanligvis med Docker Desktop, men du kan også installere det separat hvis nødvendig. Docker Compose lar deg definere og kjøre multi-kontainer Docker-applikasjoner ved hjelp av en YAML-fil. Følg instruksjonene på [Docker Compose sin offisielle nettside](https://docs.docker.com/compose/install/) for å installere det.
+
+3. **Visual Studio Code**: Dette er en populær kodeditor som støtter en rekke utvidelser for å jobbe med Docker. Du kan laste ned og installere Visual Studio Code fra [Visual Studio Code sin offisielle nettside](https://code.visualstudio.com/).
+
+Visual Studio Code skiller seg fra Visual Studio ved å være lettere og mer fleksibel. Mens Visual Studio er en fullverdig integrert utviklingsmiljø (IDE) som er spesielt godt egnet for store prosjekter og enterprise-utvikling i .NET, er Visual Studio Code en kodeditor som er raskere å starte opp og enklere å tilpasse med extensions. Dette gjør Visual Studio Code ideell for cloud-utvikling, hvor man ofte jobber med containere, mikrotjenester og andre moderne utviklingsmetoder som krever en smidig og tilpasningsdyktig arbeidsflyt.
+
+### Gode extensions i Visual Studio Code
+For en god kodeopplevelse, bør du installere nødvendige extensions i Visual Studio Code:
+1. **Docker Extension**: Gir støtte for å bygge, administrere og kjøre containere direkte fra VS Code. https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker
+2. **YAML Extension**: For bedre støtte og autokomplettering når du jobber med YAML-filer. https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
+
+Når du har installert disse verktøyene og extensions, er du klar til å begynne å jobbe med Docker og følge oppgavene i denne veiledningen.
+
+### Hvordan koble til database med MySQL Workbench?
+
+Følg guiden [her](https://medium.com/@victoria.kruczek_15509/create-a-local-database-with-docker-compose-and-view-it-in-mysql-workbench-974aee047874) som viser hvordan en kobler seg til databasen med MySQL Workbench. 
+
+### Eksempel på prosjektstruktur med `docker-compose` og flere ulike prosjekter
+
+
+Dette kan være en typisk prosjektstruktur når man jobber med `docker-compose`. Strukturen viser hvordan man kan organisere filer og kataloger for en applikasjon som består av flere tjenester, som en API-tjeneste, en web-tjeneste og en database. Hver tjeneste har sin egen Dockerfile og nødvendige konfigurasjonsfiler. `docker-compose.yml` filen brukes til å definere og administrere disse tjenestene.
+
+```
+project-root/
+├── docker-compose.yml
+├── api/
+│   ├── Dockerfile
+│   ├── Program.cs
+│   ├── Startup.cs
+│   ├── api.csproj
+│   └── ...
+├── web/
+│   ├── Dockerfile
+│   ├── Program.cs
+│   ├── Startup.cs
+│   ├── web.csproj
+│   └── ...
+├── db/
+│   └── init.sql
+└── README.md
+```
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+ 
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+ 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+ 
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+```
+
+> [!TIP]  
+> Trykk på dropdownen under for å se dokumentasjon om portene som er valgt i `docker.compose.yml`-filen over.
+
+<details><summary>Dokumentasjon for docker-compose.yml</summary>
+
+### Valg av porter
+
+I denne `docker-compose.yml`-filen har vi valgt å mappe forskjellige porter på vertsmaskinen til port 80 på containerne. Her er en forklaring på hvorfor vi har gjort disse valgene:
+
+#### API-tjenesten
+- **Vertsmaskinens port 5000 til containerens port 80**:
+  - Vi har valgt å mappe port 5000 på vertsmaskinen til port 80 på API-containeren. Dette gjør det enkelt å få tilgang til API-tjenesten via vertsmaskinens port 5000, samtidig som vi holder standard HTTP-porten (80) inne i containeren. Dette er nyttig for å unngå portkonflikter på vertsmaskinen og for å kunne kjøre flere tjenester samtidig.
+
+#### Web-tjenesten
+- **Vertsmaskinens port 8080 til containerens port 80**:
+  - Web-tjenesten er mappet fra port 8080 på vertsmaskinen til port 80 på containeren. Dette følger samme prinsipp som for API-tjenesten, hvor vi bruker en annen port på vertsmaskinen (8080) for å unngå konflikter og samtidig holde standard HTTP-porten (80) inne i containeren. Dette gjør det enkelt å få tilgang til web-applikasjonen via vertsmaskinens port 8080.
+
+#### Database-tjenesten
+- **Vertsmaskinens port 3306 til containerens port 3306**:
+  - For database-tjenesten har vi valgt å mappe port 3306 på vertsmaskinen direkte til port 3306 på containeren. Dette er fordi 3306 er standardporten for MySQL-databaser, og det er praktisk å bruke samme port både på vertsmaskinen og inne i containeren for enkel tilgang og administrasjon.
+
+Ved å bruke forskjellige porter på vertsmaskinen for API- og web-tjenestene, kan vi kjøre begge tjenestene samtidig uten portkonflikter. Samtidig holder vi standard HTTP-porten (80) inne i containerne for konsistens og enkelhet.
+
+</details>
+
+
+-------
+
 ### **Oppgave 1: Opprette en enkel Docker-kontainer**
 
 > [!IMPORTANT]  
