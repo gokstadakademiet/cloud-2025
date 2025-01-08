@@ -4,6 +4,7 @@
 - [Om kurset](#om-kurset)
 - [Ukesinnhold]()
   - [Uke 1](./uke_1)
+  - [Uke 2](./uke_2)
 - [Formål](#formål)
 - [Hvordan bruke ukesoppgavene](#hvordan-bruke-ukesoppgavene)
 
