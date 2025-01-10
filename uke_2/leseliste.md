@@ -31,3 +31,8 @@ Vi oppfordrer deg til å lese gjennom disse artiklene grundig, da de vil gi deg 
 - [Introduction to Amazon EC2 - Elastic Cloud Server & Hosting with AWS](https://www.youtube.com/watch?v=TsRBftzZsQo)
 - [AWS EC2 Tutorial — A Beginner’s Guide To Amazon EC2](https://medium.com/edureka/aws-ec2-tutorial-16583cc7798e)
 - [AWS EC2 for Beginners](https://towardsdatascience.com/aws-ec2-for-beginners-56df2e820d7f)
+
+### ECS
+- [An Overview of AWS Elastic Container Service (ECS)](https://www.youtube.com/watch?v=I9VAMGEjW-Q)
+- [AWS EC2 on ECS vs Fargate | Whats the Difference and When To Use What?](https://www.youtube.com/watch?v=DVrGXjjkpig)
+- [Gentle Introduction to How AWS ECS Works with Example Tutorial](https://medium.com/boltops/gentle-introduction-to-how-aws-ecs-works-with-example-tutorial-cea3d27ce63d)

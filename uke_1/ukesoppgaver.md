@@ -548,58 +548,6 @@ volumes:
 
 </details>
 
-<!-- ### **Oppgave 10: Skalerbarhet**
-
-> [!TIP]  
-> Skalerbarhet lar deg håndtere flere forespørsler ved å kjøre flere instanser av web-tjenesten.
-
-Skaler web-tjenesten til å kjøre flere instanser.
-
-<details><summary>Løsning</summary>
-
-```yaml
-version: '3'
-services:
-    web: 
-        build: .
-        ports:
-            - "8080:8080"
-        environment:
-            MYSQL_HOST: db
-            MYSQL_USER: exampleuser
-            MYSQL_PASSWORD: examplepass
-            MYSQL_DATABASE: exampledb
-        depends_on: 
-            db:
-                condition: service_healthy
-        deploy:
-            replicas: 3
-            
-    db:
-        image: mysql:latest
-        environment:
-            MYSQL_ROOT_PASSWORD: example
-        ports: 
-            - "3306:3306"
-        volumes:
-            - mysql-data:/var/lib/mysql
-        healthcheck:
-            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pexample"]
-            interval: 10s
-            timeout: 5s
-            retries: 3
-
-volumes:
-    mysql-data:
-```
-
-**Forklaring:**
-
-1. **Skalerbarhet**: Vi bruker `deploy`-direktivet til å skalere web-tjenesten til å kjøre flere instanser. Skalerbarhet er evnen til å øke eller redusere antall kontainere som kjører en tjeneste basert på behov.
-2. **Oppdatere `docker-compose.yml`**: Vi oppdaterer `docker-compose.yml` filen til å inkludere skalerbarhet. Dette gjør det mulig å håndtere flere forespørsler ved å kjøre flere instanser av web-tjenesten.
-
-</details> -->
-
 ### **Oppgave 10: Helsekontroll**
 
 > [!NOTE]  

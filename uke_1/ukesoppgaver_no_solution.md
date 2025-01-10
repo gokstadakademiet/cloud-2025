@@ -228,14 +228,6 @@ Bruk miljøvariabler for å konfigurere databaseforbindelsen.
 Legg til et volum for å vedvare dataene i MySQL-databasen.
 
 
-<!-- ### **Oppgave 10: Skalerbarhet**
-
-> [!TIP]  
-> Skalerbarhet lar deg håndtere flere forespørsler ved å kjøre flere instanser av web-tjenesten.
-
-Skaler web-tjenesten til å kjøre flere instanser.
-
-
 ### **Oppgave 10: Helsekontroll**
 
 > [!NOTE]  
