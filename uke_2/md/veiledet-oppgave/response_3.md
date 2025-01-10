@@ -11,20 +11,15 @@ I denne oppgaven skal vi forbedre oppgavestyringssystemets tilgjengelighet ved �
 5. Test høy tilgjengelighet ved å simulere en feil i én Availability Zone.
 
 ### Mermaid-diagram:
-```mermaid
-architecture-beta
-   service alb(logos:aws-ec2)[Application Load Balancer]
-   service ecs(logos:aws-ecs)[ECS Cluster]
-   service task1(logos:aws-ecs)[Task AZ1]
-   service task2(logos:aws-ecs)[Task AZ2]
-   service container1(logos:docker)[Container 1]
-   service container2(logos:docker)[Container 2]
 
-   alb:B --> T:ecs
-   ecs:L --> R:task1
-   ecs:R --> L:task2
-   task1:B --> T:container1
-   task2:B --> T:container2
+```mermaid
+graph TD
+   A[Internet] --> B[Application Load Balancer]
+   B --> C[ECS Cluster]
+   C --> D[AZ-1: ECS Task]
+   C --> E[AZ-2: ECS Task]
+   D --> F[Container 1]
+   E --> G[Container 2]
 ```
 
 <details>
