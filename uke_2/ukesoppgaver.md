@@ -1,10 +1,22 @@
 # Oppgavesett: AWS - Console, VPC og EC2
 # Innholdsfortegnelse
 
+# Innholdsfortegnelse 
+
+1. [Oppsett av VPC og EC2-instans](#oppgave-1-oppsett-av-vpc-og-ec2-instans)
+2. [Installasjon av webserver og database](#oppgave-2-installasjon-av-webserver-og-database)
+3. [Implementer backend for oppgavestyring](#oppgave-3-implementer-backend-for-oppgavestyring)
+4. [Implementer frontend for oppgavestyring](#oppgave-4-implementer-frontend-for-oppgavestyring)
+5. [Migrering til containere med Docker og ECS](#oppgave-5-migrering-til-containere-med-docker-og-ecs)
+6. [Konfigurering av Security Groups](#oppgave-6-konfigurering-av-security-groups)
+7. [Implementering av høy tilgjengelighet med ECS](#oppgave-7-implementering-av-høy-tilgjengelighet-med-ecs)
 
 # Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
 
 I dette kurset skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tjenester. Vi vil starte med grunnleggende oppsett og gradvis bygge ut funksjonaliteten. Kurset vil fokusere på infrastruktur og AWS-tjenester, med minimal vekt på applikasjonskode.
+
+> [!NOTE]
+> **Før du begynner er det viktig at du setter deg inn i AWS Free Tier, se artikkel [her](../aws.md).**
 
 ## Oppgave 1: Oppsett av VPC og EC2-instans
 

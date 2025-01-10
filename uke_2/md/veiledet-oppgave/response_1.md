@@ -1,7 +1,3 @@
-# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
-
-I dette kurset skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tjenester. Vi vil starte med grunnleggende oppsett og gradvis bygge ut funksjonaliteten. Kurset vil fokusere på infrastruktur og AWS-tjenester, med minimal vekt på applikasjonskode.
-
 ## Oppgave 1: Oppsett av VPC og EC2-instans
 
 I denne oppgaven skal du sette opp en Virtual Private Cloud (VPC) og lansere en EC2-instans som vil fungere som vår webserver.
