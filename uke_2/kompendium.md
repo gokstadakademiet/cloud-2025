@@ -24,13 +24,13 @@
      - [Amazon CloudWatch](#amazon-cloudwatch)
      - [CloudWatch Alarms](#cloudwatch-alarms)
      - [AWS Health Dashboard](#aws-health-dashboard)
-4. [Amazon Elastic Container Service (ECS)](#4-amazon-elastic-container-service-ecs)
+<!-- 4. [Amazon Elastic Container Service (ECS)](#4-amazon-elastic-container-service-ecs)
    - [Hva er Amazon ECS?](#hva-er-amazon-ecs)
    - [Hovedkomponenter i ECS](#hovedkomponenter-i-ecs)
    - [ECS og Docker Integrasjon](#ecs-og-docker-integrasjon)
    - [Deployment Strategier](#deployment-strategier)
    - [ECS Launch Types](#ecs-launch-types)
-   - [Integrering med AWS-tjenester](#integrering-med-aws-tjenester)
+   - [Integrering med AWS-tjenester](#integrering-med-aws-tjenester) -->
 
 # **1. Introduksjon til AWS**
 
@@ -196,7 +196,7 @@ Alarmer overvåker metrics og utløser actions:
 - Personlige varsler om hendelser som påvirker dine ressurser
 - Planlagt vedlikehold og service health history
 
-# **4. Amazon Elastic Container Service (ECS)**
+<!-- # **4. Amazon Elastic Container Service (ECS)**
 
 ## Hva er Amazon ECS?
 
@@ -240,4 +240,4 @@ ECS integrerer sømløst med:
 - Application Load Balancer for trafikk-distribusjon
 - CloudWatch for logging og monitorering
 - IAM for sikkerhet og tilgangskontroll
-- VPC for nettverksisolasjon
+- VPC for nettverksisolasjon -->

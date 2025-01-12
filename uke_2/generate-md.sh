@@ -10,15 +10,12 @@ echo "# Oppgavesett: AWS - Console, VPC og EC2" > "$TARGET_FILE"
 
 echo "# Innholdsfortegnelse
 
-# Innholdsfortegnelse 
-
 1. [Oppsett av VPC og EC2-instans](#oppgave-1-oppsett-av-vpc-og-ec2-instans)
 2. [Installasjon av webserver og database](#oppgave-2-installasjon-av-webserver-og-database)
 3. [Implementer backend for oppgavestyring](#oppgave-3-implementer-backend-for-oppgavestyring)
 4. [Implementer frontend for oppgavestyring](#oppgave-4-implementer-frontend-for-oppgavestyring)
-5. [Migrering til containere med Docker og ECS](#oppgave-5-migrering-til-containere-med-docker-og-ecs)
-6. [Konfigurering av Security Groups](#oppgave-6-konfigurering-av-security-groups)
-7. [Implementering av høy tilgjengelighet med ECS](#oppgave-7-implementering-av-høy-tilgjengelighet-med-ecs)
+5. [Migrering til containere med Docker på EC2](#oppgave-5-migrering-til-containere-med-docker-på-ec2)
+6. [Konfigurering av Security Groups for Docker](#oppgave-6-konfigurering-av-security-groups-for-docker)
 " >> "$TARGET_FILE"
 
 echo "# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
