@@ -28,13 +28,15 @@ Nedenfor finner du tiltak som kan hjelpe med å unngå bruk av tjenester utenfor
 
 ## Bruk AWS Resource Explorer
 
-AWS Resource Explorer er et verktøy som lar deg søke etter og finne AWS-ressurser i kontoen din. Dette kan være spesielt nyttig for å avdekke ressurser som du kanskje har glemt å slette etter en workshop eller eksperimentering.
+AWS Resource Explorer er et verktøy som lar deg søke etter og finne AWS-ressurser i kontoen din. Dette kan være spesielt nyttig for å avdekke ressurser som du kanskje har glemt å slette etter en workshop eller eksperimentering. Ved opprettelse av VPC huker du av for at alle ressurser i VPCet skal tagges, se bilde:
+
+![Screenshot of AWS VPC Creation](static/img/vpc-tagging.png)
 
 ### Hvordan bruke AWS Resource Explorer
 
 1. Logg inn på AWS Management Console.
 2. Gå til "Resource Explorer" fra tjenestemenyen.
-3. Bruk søkefeltet til å søke etter spesifikke ressurser, for eksempel EC2-instanser, S3-bøtter, eller RDS-databaser.
+3. Bruk søkefeltet til å søke etter dinne taggede ressurser ved å sette "Query Template" til "Tagged resources", eller til å søke på andre spesifikke ressurser, for eksempel EC2-instanser, S3-bøtter, eller RDS-databaser.
 4. Filtrer resultatene etter region, ressurs-type, eller andre kriterier for å få en bedre oversikt.
 5. Gå gjennom listen over ressurser og identifiser de som ikke lenger er nødvendige.
 6. Slett eller stopp ressurser som ikke er i bruk for å unngå unødvendige kostnader.

@@ -24,7 +24,7 @@ graph TD
 <summary>Løsning</summary>
 
 1. Opprett VPC:
-   - Gå til VPC Dashboard i AWS Console
+   - Gå til VPC Dashboard i AWS Console ved å søke på "VPC"
    - Klikk \"Create VPC\
    - Klikk \"VPC and more\"
    - Angi navn og CIDR-blokk 10.0.0.0/16
