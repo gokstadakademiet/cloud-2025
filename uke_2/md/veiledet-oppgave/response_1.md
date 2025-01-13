@@ -57,10 +57,14 @@ graph TD
             - Gi den et navn
             - Inbound Security Group Rules: 
                 - Type: ssh, Protocol: TCP, Port range: 22, Source Type: anywhere
-                - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: anywhere
+                - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: 0.0.0.0/0 (anywhere)
 
     - Konfigurer security group: Tillat inngående trafikk på port 22 og 80
     - Launch instance
+
+I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing. Se bilde:
+
+![Screenshot of AWS VPC Creation](../../../static/img/ec2-init.png)
 
 Dette setter opp grunnleggende infrastruktur for vårt oppgavestyringssystem.
 
@@ -98,6 +102,10 @@ graph TD
 
    Riktig kommando kan også finnes her ved å gå inn i `EC2`-viewet til AWS, og deretter trykke på `Connect` i menyen øverst til høyre. Du trykker deg videre inn på `SSH Client`, og ser en link i bunn der som skal se noe ala dette ut: `ssh -i "taskmanager-key.pem" ec2-user@ec2-54-75-40-70.eu-west-1.compute.amazonaws.com`
 
+    ![Screenshot of AWS VPC Creation](../../../static/img/ec2-connect.png)
+
+    Du vil få opp følgende spørsmål ved første gang du bruker SSH inn i instansen `Are you sure you want to continue connecting (yes/no/[fingerprint])?`. Skriv `yes` og trykk enter. Du vil nå befinne deg inne i terminalen til EC2-instansen, som kan ses med følgende i terminalen: `[ec2-user@ip-10-0-10-238 ~]$`. Her vil du kunne kjøre kommandoer som `ls`, `pwd` etc. må samme måte som på lokal maskin. 
+
 2. Installer Nginx:
    ```
    sudo yum update -y
@@ -105,6 +113,8 @@ graph TD
    sudo systemctl start nginx
    sudo systemctl enable nginx
    ```
+
+   Du kan nå prøve å gå til IPen til EC2-instansen din ved å skrive inn IP-adressen i adressefeltet i Google Chrome og se at `Welcome to nginx!` dukker opp. 
 
 3. Installer MySQL:
    ```
@@ -114,8 +124,9 @@ graph TD
     sudo mysql_secure_installation
 
     Follow prompts:
-    - Enter current password for root (press Enter for none)
-    - Set root password (remember this)
+    - Enter current password for root (press Enter for none) -> yourpassword
+    - Switch to unix_socket authentication [Y/n] -> n
+    - Change the root password? [Y/n] -> n
     - Remove anonymous users? (Y)
     - Disallow root login remotely? (Y)
     - Remove test database and access to it? (Y)
@@ -123,22 +134,21 @@ graph TD
    ```
 
 4. Konfigurer Nginx:
-   ```
-   sudo nano /usr/share/nginx/html/index.html
-   ```
+```bash
+sudo tee /usr/share/nginx/html/index.html << 'EOF'
+<html>
+    <body>
+    <h1>Velkommen til oppgavestyringssystemet</h1>
+    </body>
+</html>
+EOF
+```
 
-    Bruk `ctrl + K` for å fjerne linjer.
+5. Propager endringene til `nginx`:
 
-   Skriv inn:
-   ```html
-   <html>
-     <body>
-       <h1>Velkommen til oppgavestyringssystemet</h1>
-     </body>
-   </html>
-   ```
-
-   For å se nettsiden, åpne en nettleser og besøk EC2-instansens offentlige IPv4-adresse. Du finner denne adressen i EC2 Dashboard under "Public IPv4 address".
+```bash
+sudo systemctl restart nginx
+```
 
 5. Opprett database:
    ```
@@ -149,7 +159,7 @@ graph TD
    exit
    ```
 
-Du har nå satt opp en webserver og en database på EC2-instansen. Du kan åpne en nettleser og gå til EC2-instansens offentlige IP-adresse for å se velkomstsiden.
+Du har nå satt opp en webserver og en database på EC2-instansen. Du kan åpne en nettleser og gå til EC2-instansens offentlige IP-adresse for å se velkomstsiden. Du finner denne adressen i EC2 Dashboard under "Public IPv4 address".
 
 </details>
 
@@ -185,7 +195,7 @@ graph TD
 
     sudo yum install python3 python3-pip mariadb105-devel gcc python3-devel -y
 
-    pip3 install --user flask flask-sqlalchemy mariadb=1.0.11 pymysql
+    pip3 install --user flask flask-sqlalchemy mariadb==1.0.11 pymysql
    ```
 
 2. Opprett Flask-applikasjon (app.py):
@@ -256,7 +266,7 @@ EOL'
    sudo systemctl restart nginx
    ```
 
-Du har nå implementert en enkel backend for oppgavestyringssystemet. Du kan teste API-endepunktene ved å sende HTTP-forespørsler til EC2-instansens offentlige IP-adresse.
+Du har nå implementert en enkel backend for oppgavestyringssystemet. Foreløpig er dette en lukket adresse da port 5000 ikke er eksponert i EC2 instansen din i security groups. Hvis du vil teste APIet ditt, f.eks. ved å skrive `http://52.31.158.146:5000/tasks` (bruk din EC2 instans sin IP adresse), så må først port 5000 legges til i inbound rules for security groupen til EC2 instansen. 
 
 </details>
 
@@ -409,12 +419,7 @@ http {
 EOL
 ```
 
-5. Kopier frontend-filer til Nginx-mappen:
-```
-sudo cp index.html style.css script.js /usr/share/nginx/html/
-```
-
-6. Omstart Nginx:
+5. Omstart Nginx:
 ```
 sudo systemctl restart nginx
 ```
@@ -512,7 +517,7 @@ graph TD
 <details>
 <summary>Løsning</summary>
 
-1. Først må vi opprette filene og Dockerfiles lokalt:
+1. Først må vi opprette filene og Dockerfiles lokalt. Før du oppretter disse må du korrigere `API_ENDPOINT` i script.js nedenfor og sette den til din EC2 instans sin public IP:
 
 ```bash
 cat << 'EOF' > requirements.txt
@@ -618,8 +623,10 @@ input, textarea, button {
 EOF
 
 cat << 'EOF' > frontend/html/script.js
+const API_ENDPOINT = 'http://52.16.19.129:5000';
+
 async function getTasks() {
-    const response = await fetch('http://3.249.212.86:5000/tasks');
+    const response = await fetch(`${API_ENDPOINT}/tasks`);
     const tasks = await response.json();
     const taskList = document.getElementById('task-list');
     taskList.innerHTML = '';
@@ -639,7 +646,7 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('task-title').value;
     const description = document.getElementById('task-description').value;
-    await fetch('http://3.249.212.86:5000/tasks', {
+    await fetch(`${API_ENDPOINT}/tasks`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -729,6 +736,8 @@ sudo mysql
 
 CREATE USER 'root'@'%' IDENTIFIED BY 'yourpassword';
 
+CREATE DATABASE taskmanager;
+
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 
@@ -736,9 +745,16 @@ exit
 ```
 
 5. Pull og kjør containere på EC2:
+
+SSH inn på EC2-instansen hvis du ikke allerede er inne på den:
+
 ```bash
 ssh -i "your-key.pem" ec2-user@your-ec2-ip
+```
 
+Kjør disse kommandoene på EC2-instansen:
+
+```bash
 docker pull flaattengokstad/taskmanager-frontend:latest
 docker pull flaattengokstad/taskmanager-backend:latest
 
@@ -750,7 +766,7 @@ docker run -d --name frontend -p 80:80 flaattengokstad/taskmanager-frontend:late
 
 ## Oppgave 6: Konfigurering av Security Groups for Docker
 
-I denne oppgaven skal du konfigurere security groups for å sikre riktig nettverkstilgang til Docker-containerne.
+I denne oppgaven skal du konfigurere security groups for å sikre riktig nettverkstilgang til Docker-containerne. Det kan være at du allerede har gjort dette i oppgave 5, men hvis du sliter med å få frontend til å snakke med frontend er det sannsynligvis fordi du ikke har åpnet port 5000 på EC2 instansen. Se i såfall oppgaven under:
 
 ### Oppgavebeskrivelse:
 
