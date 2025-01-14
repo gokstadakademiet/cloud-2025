@@ -36,9 +36,10 @@ AWS Resource Explorer er et verktøy som lar deg søke etter og finne AWS-ressur
 
 1. Logg inn på AWS Management Console.
 2. Gå til "Resource Explorer" fra tjenestemenyen.
-3. Bruk søkefeltet til å søke etter dinne taggede ressurser ved å sette "Query Template" til "Tagged resources", eller til å søke på andre spesifikke ressurser, for eksempel EC2-instanser, S3-bøtter, eller RDS-databaser.
-4. Filtrer resultatene etter region, ressurs-type, eller andre kriterier for å få en bedre oversikt.
-5. Gå gjennom listen over ressurser og identifiser de som ikke lenger er nødvendige.
-6. Slett eller stopp ressurser som ikke er i bruk for å unngå unødvendige kostnader.
+3. Gjelder kun første gang du er innom Resource Explorer: Trykk på `Turn on Resource Explorer` -> `Quick Setup`
+4. Bruk søkefeltet til å søke etter dinne taggede ressurser ved å sette "Query Template" til "Tagged resources", eller til å søke på andre spesifikke ressurser, for eksempel EC2-instanser, S3-bøtter, eller RDS-databaser.
+5. Filtrer resultatene etter region, ressurs-type, eller andre kriterier for å få en bedre oversikt.
+6. Gå gjennom listen over ressurser og identifiser de som ikke lenger er nødvendige.
+7. Slett eller stopp ressurser som ikke er i bruk for å unngå unødvendige kostnader.
 
 Ved å regelmessig bruke AWS Resource Explorer kan du bli mer sikker på at du ikke har ubrukte ressurser som påløper kostnader, og dermed holde deg innenfor AWS Free Tier-grensene.
