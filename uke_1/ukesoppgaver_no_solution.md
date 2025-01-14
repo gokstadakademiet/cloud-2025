@@ -108,4 +108,195 @@ services:
 ```
 
 > [!TIP]  
-> Trykk på dropdownen under for å se dokument
+> Trykk på dropdownen under for å se dokumentasjon om portene som er valgt i `docker.compose.yml`-filen over.
+
+<details><summary>Dokumentasjon for docker-compose.yml</summary>
+
+### Valg av porter
+
+I denne `docker-compose.yml`-filen har vi valgt å mappe forskjellige porter på vertsmaskinen til port 80 på containerne. Her er en forklaring på hvorfor vi har gjort disse valgene:
+
+#### API-tjenesten
+- **Vertsmaskinens port 5000 til containerens port 80**:
+  - Vi har valgt å mappe port 5000 på vertsmaskinen til port 80 på API-containeren. Dette gjør det enkelt å få tilgang til API-tjenesten via vertsmaskinens port 5000, samtidig som vi holder standard HTTP-porten (80) inne i containeren. Dette er nyttig for å unngå portkonflikter på vertsmaskinen og for å kunne kjøre flere tjenester samtidig.
+
+#### Web-tjenesten
+- **Vertsmaskinens port 8080 til containerens port 80**:
+  - Web-tjenesten er mappet fra port 8080 på vertsmaskinen til port 80 på containeren. Dette følger samme prinsipp som for API-tjenesten, hvor vi bruker en annen port på vertsmaskinen (8080) for å unngå konflikter og samtidig holde standard HTTP-porten (80) inne i containeren. Dette gjør det enkelt å få tilgang til web-applikasjonen via vertsmaskinens port 8080.
+
+#### Database-tjenesten
+- **Vertsmaskinens port 3306 til containerens port 3306**:
+  - For database-tjenesten har vi valgt å mappe port 3306 på vertsmaskinen direkte til port 3306 på containeren. Dette er fordi 3306 er standardporten for MySQL-databaser, og det er praktisk å bruke samme port både på vertsmaskinen og inne i containeren for enkel tilgang og administrasjon.
+
+Ved å bruke forskjellige porter på vertsmaskinen for API- og web-tjenestene, kan vi kjøre begge tjenestene samtidig uten portkonflikter. Samtidig holder vi standard HTTP-porten (80) inne i containerne for konsistens og enkelhet.
+
+</details>
+
+
+-------
+
+### **Oppgave 1: Opprette en enkel Docker-kontainer**
+
+> [!IMPORTANT]  
+> Sørg for at du har Docker installert på maskinen din før du starter denne oppgaven.
+
+Lag en enkel Docker-kontainer som kjører en "Hello World"-applikasjon. Bruk et offisielt Docker-bilde for å gjøre dette. Du kan bruke følgende Node-kode for "Hello World"-applikasjonen:
+
+```javascript
+// app.js
+const http = require('http');
+
+const hostname = '0.0.0.0';
+const port = 8080;
+
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('Hello World');
+});
+
+server.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}/`);
+});
+```
+
+
+### **Oppgave 2: Bygge og kjøre Docker-kontaineren**
+
+> [!NOTE]  
+> Sørg for at du er i samme katalog som Dockerfile når du kjører kommandoene nedenfor.
+
+Bygg Docker-bildet fra Dockerfile og kjør kontaineren. 
+
+
+### **Oppgave 3: Bruke Docker Compose**
+
+> [!TIP]  
+> Docker Compose gjør det enklere å administrere multi-kontainer applikasjoner ved å bruke en enkel YAML-fil.
+
+Lag en `docker-compose.yml` fil for å kjøre applikasjonen fra forrige oppgave.
+
+
+### **Oppgave 4: Kjør applikasjonen med Docker Compose**
+
+> [!IMPORTANT]  
+> Sørg for at Docker Compose er installert på systemet ditt før du kjører kommandoen nedenfor.
+
+Kjør applikasjonen ved hjelp av Docker Compose.
+
+
+### **Oppgave 5: Legge til en database**
+
+> [!CAUTION]  
+> Sørg for at du har nok ressurser på maskinen din til å kjøre både web-tjenesten og databasen.
+
+Utvid `docker-compose.yml` filen til å inkludere en MySQL-database. Husk å legge til en helsesjekk for å være sikker på at databasen har startet før webserveren spinnes opp.
+
+
+
+### **Oppgave 6: Logge inn i databasen og verifiser at brukeren `exampleuser` er opprettet**
+
+> [!TIP]  
+> Bruk MySQL-klienten til å logge inn i databasen som rot-brukeren og kjøre `SHOW DATABASES`.
+
+Logg inn i MySQL-databasen som rot-brukeren og kjør kommandoen `SHOW DATABASES` for å vise alle tilgjengelige databaser. Verifiser også at brukeren `exampleuser` eksisterer i databasen.
+
+
+
+### **Oppgave 7: Koble applikasjonen til databasen**
+
+> [!NOTE]  
+> Sørg for at MySQL-tjenesten kjører før du prøver å koble til databasen fra applikasjonen.
+
+Oppdater Node.js-applikasjonen til å koble til MySQL-databasen.
+
+
+### **Oppgave 8: Miljøvariabler**
+
+> [!TIP]  
+> Bruk av miljøvariabler gjør applikasjonen mer fleksibel og enklere å konfigurere i forskjellige miljøer.
+
+Bruk miljøvariabler for å konfigurere databaseforbindelsen.
+
+
+
+### **Oppgave 9: Volumer**
+
+> [!IMPORTANT]  
+> Volumer sikrer at dataene dine vedvares selv om kontaineren stoppes eller slettes.
+
+Legg til et volum for å vedvare dataene i MySQL-databasen.
+
+
+### **Oppgave 10: Helsekontroll**
+
+> [!NOTE]  
+> Helsekontroller brukes til å overvåke tilstanden til en kontainer og sikre at den kjører som forventet.
+
+Legg til en helsekontroll for web-tjenesten.
+
+
+### **Oppgave 11: Feilsøking**
+
+> [!IMPORTANT]  
+> Feilsøking er en viktig ferdighet for å identifisere og rette opp feil i applikasjoner.
+
+I denne oppgaven skal du finne og rette en feil i en Docker-konfigurasjon. Koden nedenfor er ment å sette opp en enkel Node.js-applikasjon som kobler til en MySQL-database og returnerer en melding fra databasen. Men det er en feil i konfigurasjonen som forhindrer applikasjonen fra å kjøre riktig.
+
+```javascript
+// app.js
+const http = require('http');
+const mysql = require('mysql2');
+
+const hostname = '0.0.0.0';
+const port = 8080;
+const dbConfig = {
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port: 3306
+};
+
+const connection = mysql.createConnection(dbConfig);
+
+connection.connect((err) => {
+        if (err) throw err;
+        console.log('Connected to database');
+
+        const server = http.createServer((req, res) => {
+                connection.query('SELECT message FROM messages LIMIT 1', (err, result) => {
+                        if (err) throw err;
+
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'text/plain');
+                        res.end(result[0].message);
+                });
+        });
+
+        server.listen(port, hostname, () => {
+                console.log(`Server running at http://${hostname}:${port}/`);
+        });
+});
+```
+
+
+
+
+### **Oppgave 12: Pushe Docker Image til Docker Hub**
+
+> [!TIP]  
+> Å pushe Docker images til Docker Hub gjør det enkelt å dele og distribuere applikasjonene dine.
+
+I denne oppgaven skal vi pushe Docker imaget for web-containeren til Docker Hub.
+
+
+### **Oppgave 13: Pulle Docker Image fra Docker Hub**
+
+> [!TIP]  
+> Å pulle Docker images fra Docker Hub gjør det enkelt å sette opp applikasjoner uten å måtte bygge dem lokalt.
+
+I denne oppgaven skal vi pulle Docker imaget for web-containeren fra Docker Hub og bruke det i en `docker-compose`-fil.
+
+
+

@@ -62,7 +62,7 @@ graph TD
     - Konfigurer security group: Tillat inngående trafikk på port 22 og 80
     - Launch instance
 
-I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing. Se bilde:
+I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing`. Se bilde:
 
 ![Screenshot of AWS VPC Creation](../../../static/img/ec2-init.png)
 
@@ -94,6 +94,8 @@ graph TD
 
 <details>
 <summary>Løsning</summary>
+
+Før du begynner her må det settes riktige tilganger på SSH-nøkkelen. Det gjør du ved å kjøre `chmod 400 <your-key>.pem`.
 
 1. Koble til EC2-instansen ved å kjøre følgende kommando i terminalen din:
    ```

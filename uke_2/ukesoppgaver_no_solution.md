@@ -79,9 +79,9 @@ graph TD
     - Konfigurer security group: Tillat inngående trafikk på port 22 og 80
     - Launch instance
 
-I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing. Se bilde:
+I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing`. Se bilde:
 
-![Screenshot of AWS VPC Creation](../../../static/img/ec2-init.png)
+![Screenshot of AWS VPC Creation](../static/img/ec2-init.png)
 
 Dette setter opp grunnleggende infrastruktur for vårt oppgavestyringssystem.
 
@@ -112,6 +112,8 @@ graph TD
 <details>
 <summary>Løsning</summary>
 
+Før du begynner her må det settes riktige tilganger på SSH-nøkkelen. Det gjør du ved å kjøre `chmod 400 <your-key>.pem`.
+
 1. Koble til EC2-instansen ved å kjøre følgende kommando i terminalen din:
    ```
    ssh -i your-key.pem ec2-user@your-instance-ip
@@ -119,7 +121,7 @@ graph TD
 
    Riktig kommando kan også finnes her ved å gå inn i `EC2`-viewet til AWS, og deretter trykke på `Connect` i menyen øverst til høyre. Du trykker deg videre inn på `SSH Client`, og ser en link i bunn der som skal se noe ala dette ut: `ssh -i "taskmanager-key.pem" ec2-user@ec2-54-75-40-70.eu-west-1.compute.amazonaws.com`
 
-    ![Screenshot of AWS VPC Creation](../../../static/img/ec2-connect.png)
+    ![Screenshot of AWS VPC Creation](../static/img/ec2-connect.png)
 
     Du vil få opp følgende spørsmål ved første gang du bruker SSH inn i instansen `Are you sure you want to continue connecting (yes/no/[fingerprint])?`. Skriv `yes` og trykk enter. Du vil nå befinne deg inne i terminalen til EC2-instansen, som kan ses med følgende i terminalen: `[ec2-user@ip-10-0-10-238 ~]$`. Her vil du kunne kjøre kommandoer som `ls`, `pwd` etc. må samme måte som på lokal maskin. 
 

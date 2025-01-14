@@ -30,3 +30,6 @@ for md_file in $(ls "$SOURCE_DIR"/*.md | sort); do
     sed 's/^[[:space:]]*>/>/' "$md_file" >> "$TARGET_FILE"
     echo "\n\n" >> "$TARGET_FILE"
 done
+
+echo "Fixing image paths..."
+sed -i '' 's|\.\./\.\./\.\./static/img/|\.\./static/img/|g' "$TARGET_FILE"
