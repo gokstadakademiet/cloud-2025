@@ -5,6 +5,7 @@
 - [Ukesinnhold]()
   - [Uke 1](./uke_1)
   - [Uke 2](./uke_2)
+  - [Uke 3](./uke_3)
 - [Formål](#formål)
 - [Hvordan bruke ukesoppgavene](#hvordan-bruke-ukesoppgavene)
 
