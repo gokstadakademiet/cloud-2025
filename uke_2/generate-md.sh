@@ -24,6 +24,9 @@ I dette kurset skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tj
 
 > [!NOTE]
 > **Før du begynner er det viktig at du setter deg inn i AWS Free Tier, se artikkel [her](../aws.md).**
+
+> [!NOTE]
+> **Hvis du bruker Windows er det lurt å laste ned Git Bash og bruke det som terminal for oppgavene, fremfor f.eks. PowerShell som er typisk på Windows. Du vil da kunne kjøre samme kommandoer som vist i ukesoppgavene Se video for hvordan Git Bash installeres [her](https://www.youtube.com/watch?v=qdwWe9COT9k).**
 " >> "$TARGET_FILE"
 
 for md_file in $(ls "$SOURCE_DIR"/*.md | sort); do
