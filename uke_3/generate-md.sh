@@ -12,13 +12,12 @@ echo "# Innholdsfortegnelse
 
 # Innholdsfortegnelse 
 
-1. [Oppsett av VPC og EC2-instans](#oppgave-1-oppsett-av-vpc-og-ec2-instans)
-2. [Installasjon av webserver og database](#oppgave-2-installasjon-av-webserver-og-database)
-3. [Implementer backend for oppgavestyring](#oppgave-3-implementer-backend-for-oppgavestyring)
-4. [Implementer frontend for oppgavestyring](#oppgave-4-implementer-frontend-for-oppgavestyring)
-5. [Migrering til containere med Docker og ECS](#oppgave-5-migrering-til-containere-med-docker-og-ecs)
-6. [Konfigurering av Security Groups](#oppgave-6-konfigurering-av-security-groups)
-7. [Implementering av høy tilgjengelighet med ECS](#oppgave-7-implementering-av-høy-tilgjengelighet-med-ecs)
+1. [Oppsett av infrastruktur](#oppgave-1-sett-opp-infrastruktur)
+2. [Sett opp database](#oppgave-2-sett-opp-database)
+3. [Sett opp backend-applikasjon med Docker](#oppgave-3-sett-opp-backend-applikasjon-med-docker)
+4. [Implementer logging og overvåkning](#oppgave-4-implementer-logging-og-overvåkning)
+5. [Custom CloudWatch Metrics](#oppgave-5-custom-cloudwatch-metrics)
+6. [Implementering av AWS Lambda for periodiske oppgaver](#oppgave-6-ekstra-oppgave-for-de-som-vil-teste-er-i-utgangspunktet-neste-ukes-pensum-implementering-av-aws-lambda-for-periodiske-oppgaver)
 " >> "$TARGET_FILE"
 
 echo "# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
