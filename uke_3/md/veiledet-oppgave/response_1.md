@@ -20,7 +20,7 @@ Lag en EC2-instans med følgende spesifikasjoner:
 - Amazon Linux 2
 - t2.micro (Free Tier eligible)
 - Plasser den i ett av de offentlige subnettene
-- Opprett en ny security group som tillater innkommende trafikk på port 22 (SSH) og 80 (HTTP)
+- Opprett en ny security group som tillater innkommende trafikk på port 22 (SSH) og 80 (HTTP) og 5000 (TCP)
 
 ### 1c. Opprett en S3-bucket
 
@@ -87,6 +87,7 @@ graph TB
             - Inbound Security Group Rules: 
                 - Type: ssh, Protocol: TCP, Port range: 22, Source Type: anywhere
                 - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: 0.0.0.0/0 (anywhere)
+                - `Add security group rule` -> Type: TCP, Protocol TCP, port: 5000, Source Type: 0.0.0.0/0 (anywhere)
     - Launch instance
 
 ### 1c. Opprett en S3-bucket
@@ -101,7 +102,8 @@ Du har nå satt opp grunnleggende infrastruktur for oppgavestyringssystemet vår
 
 </details>
 
-## Oppgave 2: Sett opp database
+
+## Oppgave 2: Sett opp database i AWS RDS
 
 I denne oppgaven skal vi sette opp en MySQL-database ved hjelp av Amazon RDS for å lagre oppgaver og brukerinformasjon.
 
@@ -177,91 +179,142 @@ Nå har du satt opp en MySQL-database og konfigurert sikkerhetsgrupper for å ti
 
 </details>
 
-## Oppgave 3: Sett opp backend-applikasjon med Docker
+## Oppgave 3: Konfigurasjon for RDS database på EC2-instansen
 
-I denne oppgaven skal du containerize og deploye en Python backend til AWS EC2. Bruk følgende kode:
-
-```python
-# filepath: app.py
-from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
-db = SQLAlchemy(app)
-
-class Task(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  title = db.Column(db.String(100), nullable=False)
-  description = db.Column(db.String(200))
-  status = db.Column(db.String(20), default='To Do')
-
-@app.route('/tasks', methods=['GET'])
-def get_tasks():
-  tasks = Task.query.all()
-  return jsonify([{'id': task.id, 'title': task.title, 'description': task.description, 'status': task.status} for task in tasks])
-
-@app.route('/tasks', methods=['POST'])
-def create_task():
-  data = request.json
-  new_task = Task(title=data['title'], description=data.get('description', ''))
-  db.session.add(new_task)
-  db.session.commit()
-  return jsonify({'id': new_task.id, 'title': new_task.title, 'description': new_task.description, 'status': new_task.status}), 201
-
-if __name__ == '__main__':
-  db.create_all()
-  app.run(host='0.0.0.0', port=80)
-```
+I denne oppgaven skal du installere og konfigurere en webserver (Nginx) og konfigurasjon for å kunne koble EC2 instansen til MySQL databasen din i AWS RDS.
 
 ### Oppgavebeskrivelse:
 
-1. Lag prosjektstruktur med følgende filer:
-   - `requirements.txt` med Flask dependencies
-   - `app.py` med CRUD-endepunkter
-   - `Dockerfile` for containerization
+1. Koble til EC2-instansen via SSH.
+2. Installer MySQL dependencies for RDS.
+3. Opprett en database kalt \"taskmanager\" i MySQL.
 
-2. Bygg Docker image og publiser til Docker Hub
+<details>
+<summary>Løsning</summary>
 
-3. Kjør containeren på EC2-instansen
+Før du begynner her må det settes riktige tilganger på SSH-nøkkelen. Det gjør du ved å kjøre `chmod 400 <your-key>.pem`.
+
+1. Koble til EC2-instansen ved å kjøre følgende kommando i terminalen din:
+  ```
+  ssh -i your-key.pem ec2-user@your-instance-ip
+  ```
+
+  Riktig kommando kan også finnes her ved å gå inn i `EC2`-viewet til AWS, og deretter trykke på `Connect` i menyen øverst til høyre. Du trykker deg videre inn på `SSH Client`, og ser en link i bunn der som skal se noe ala dette ut: `ssh -i "taskmanager-key.pem" ec2-user@ec2-54-75-40-70.eu-west-1.compute.amazonaws.com`
+
+   ![Screenshot of AWS VPC Creation](../static/img/ec2-connect.png)
+
+   Du vil få opp følgende spørsmål ved første gang du bruker SSH inn i instansen `Are you sure you want to continue connecting (yes/no/[fingerprint])?`. Skriv `yes` og trykk enter. Du vil nå befinne deg inne i terminalen til EC2-instansen, som kan ses med følgende i terminalen: `[ec2-user@ip-10-0-10-238 ~]$`. Her vil du kunne kjøre kommandoer som `ls`, `pwd` etc. må samme måte som på lokal maskin. 
+
+2. Installer MySQL:
+  ```
+   sudo dnf update -y
+   sudo dnf install mariadb105 -y
+  ```
+
+3. Opprett database:
+  ```
+   mysql -h <RDS_ENDPOINT> -u admin -p
+  
+  CREATE DATABASE taskmanager;
+  exit
+  ```
+
+Du har nå installert MySQL og opprettet en database som skal brukes av oppgavestyringssystemet. Denne databasen vil bli brukt i de neste oppgavene når vi setter opp webapplikasjonen.
+
+</details>
+
+## Oppgave 4: Sett opp frontend og backend i Docker på EC2-instansen
+
+<!-- ## AWS Konfigurasjon og Access Keys
+
+Før du begynner må du sette opp AWS CLI og programatisk aksess til AWS via Terminal. Dette vil vi gå dypere inn på i neste uke, men for å kunne gjøre operasjonene vi ønsker her er vi nødt til å sette det opp. Det er forsøkt å holde bruk av AWS CLI i denne ukens oppgaver til et absolutt minimum. 
+
+### Opprette Access Keys i AWS
+1. Logg inn på AWS Management Console
+2. Gå til IAM -> Users -> Klikk på brukernavnet ditt øverst til høyre, eventuelt `admin`
+3. Velg "Security credentials"
+4. Under "Access keys", klikk på "Create access key"
+5. Noter ned Access Key ID og Secret Access Key (dette er eneste gang du får se Secret Access Key)
+6. Last ned .csv-filen for sikker oppbevaring
+
+### Konfigurere AWS CLI med profil
+1. Installer AWS CLI hvis du ikke har gjort det allerede
+2. Åpne terminal
+3. Kjør kommandoen:
+    ```bash
+    aws configure --profile gokstad
+    ```
+4. Du vil bli bedt om å fylle inn følgende:
+    - AWS Access Key ID: [Lim inn Access Key ID]
+    - AWS Secret Access Key: [Lim inn Secret Access Key]
+    - Default region name: [eu-west-1]
+    - Default output format: [Enter for json] -> Trykk enter
+
+### Tips
+- Hold access keys sikre og del aldri disse med andre
+- Roter keys regelmessig for økt sikkerhet
+- Bruk separate profiler for ulike AWS-kontoer
+- For å verifisere at profilen er satt opp korrekt:
+  ```bash
+  aws sts get-caller-identity --profile gokstad
+  ```
+
+> [!IMPORTANT]
+> Husk å aldri dele eller committe access keys til versjonskontroll! -->
+
+
+Brukes samme kode som i oppgave 5 fra forrige uke. 
+
+> [!NOTE]
+> I denne oppgaven gjør du oppgave 1 og 2 lokalt på din maskin, og deretter oppgave 3 og 4 på EC2-instansen via SSH. 
+
+### Oppgavebeskrivelse:
+
+1. Opprett Dockerfiler for frontend og backend lokalt.
+2. Bygg Docker-images og push dem til Amazon Dockerhub (Elastic Container Registry).
+3. Installer Docker på EC2-instansen.
+4. Pull images fra DockerHub og kjør containere på EC2.
 
 ### Mermaid-diagram:
+
 ```mermaid
-graph TB
-    A[Local Development] -->|Build| B[Docker Image]
-    B -->|Push| C[Docker Hub]
-    C -->|Pull| D[EC2 Instance]
-    D -->|Run| E[Container]
-    E -->|Connect| F[RDS MySQL]
+%%{init: {'theme': 'default', 'themeVariables': { 'fontSize': '16px'}}}%%
+graph TD
+    A[EC2 Instance<br>Amazon Linux 2]
+    A --> B[Docker: Frontend<br>Container nginx:alpine]
+    A --> C[Docker: Backend<br>Container python:3.8]
+    C --> D[MySQL Database<br>MariaDB 10.5]
+    E[DockerHub] --> A
 ```
 
 <details>
 <summary>Løsning</summary>
 
-### 3a. Utvikle lokal applikasjon
+1. Først må vi opprette filene og Dockerfiles lokalt. Før du oppretter disse må du korrigere `API_ENDPOINT` i script.js nedenfor og sette den til din EC2 instans sin public IP:
 
-1. Opprett en ny mappe for prosjektet:
 ```bash
-mkdir taskmanager
-cd taskmanager
-```
-
-2. Opprett `requirements.txt`:
-```text
+cat << 'EOF' > requirements.txt
 flask
 flask-sqlalchemy
 pymysql
-```
+flask-cors
+EOF
 
-3. Opprett `app.py` med samme innhold som før. Endre `YOUR_RDS_ENDPOINT` til ditt RDS endpoint. Det finner du i AWS-konsollet på RDS-siden inne på din RDS database. TODO: Legg til bilde
-
-
-```python
+cat << 'EOF' > app.py
 # filepath: app.py
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
 
@@ -285,122 +338,192 @@ def create_task():
   return jsonify({'id': new_task.id, 'title': new_task.title, 'description': new_task.description, 'status': new_task.status}), 201
 
 if __name__ == '__main__':
-  db.create_all()
+  with app.app_context():
+    db.create_all()
   app.run(host='0.0.0.0', port=80)
+EOF
+
+mkdir -p frontend/html
+
+cat << 'EOF' > frontend/html/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Oppgavestyringssystem</title>
+     <link rel="stylesheet" href="style.css">
+</head>
+<body>
+     <h1>Oppgavestyringssystem</h1>
+     <div id="task-list"></div>
+     <form id="task-form">
+          <input type="text" id="task-title" placeholder="Oppgavetittel" required>
+          <textarea id="task-description" placeholder="Oppgavebeskrivelse"></textarea>
+          <button type="submit">Legg til oppgave</button>
+     </form>
+     <script src="script.js"></script>
+</body>
+</html>
+EOF
+
+cat << 'EOF' > frontend/html/style.css
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+#task-list {
+    margin-bottom: 20px;
+}
+
+.task {
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input, textarea, button {
+    margin-bottom: 10px;
+    padding: 5px;
+}
+EOF
+
+cat << 'EOF' > frontend/html/script.js
+async function getTasks() {
+    const response = await fetch(`http://${window.location.hostname}:5000/tasks`);
+    const tasks = await response.json();
+    const taskList = document.getElementById('task-list');
+    taskList.innerHTML = '';
+    tasks.forEach(task => {
+        const taskElement = document.createElement('div');
+        taskElement.className = 'task';
+        taskElement.innerHTML = `
+            <h3>${task.title}</h3>
+            <p>${task.description}</p>
+            <p>Status: ${task.status}</p>
+        `;
+        taskList.appendChild(taskElement);
+    });
+}
+
+document.getElementById('task-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('task-title').value;
+    const description = document.getElementById('task-description').value;
+    await fetch(`http://${window.location.hostname}:5000/tasks`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title, description }),
+    });
+    getTasks();
+    e.target.reset();
+});
+
+getTasks();
+EOF
 ```
 
-### 3b. Dockerize applikasjonen
-
-1. Opprett `Dockerfile`:
-```dockerfile
-FROM python:3.9-slim
+Opprett Dockerfile for backend:
+```bash
+cat << 'EOF' > Dockerfile-backend
+FROM python:3.8-slim-buster
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libmariadb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
+
 RUN pip install -r requirements.txt
 COPY app.py .
+
 EXPOSE 80
 CMD ["python", "app.py"]
+EOF
 ```
 
-2. Bygg og push Docker image:
+Opprett Dockerfile for frontend:
 ```bash
-docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest <your-docker-hub-username>/taskmanager:latest
-docker push <your-docker-hub-username>/taskmanager:latest
+cat << 'EOF' > Dockerfile-frontend
+FROM nginx:alpine
+COPY frontend/html/* /usr/share/nginx/html/
+EOF
 ```
 
-### 3c. Kjør på EC2
-
-1. SSH til EC2-instansen:
+2. Bygg og push Docker-images:
 ```bash
-ssh -i /path/to/your-key.pem ec2-user@your-ec2-public-ip
+# Logg inn på Docker Hub
+docker login
+
+# Bygg images
+docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-backend:latest -f Dockerfile-backend .
+docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-frontend:latest -f Dockerfile-frontend .
+
+# Push til Docker Hub
+docker push <your-dockerhub-account>/taskmanager-frontend:latest
+docker push <your-dockerhub-account>/taskmanager-backend:latest
 ```
 
-2. Installer Docker:
+3. Installer Docker på EC2:
+
+Bruk SSH for å komme deg inn på EC2-instansen fra din egen maskin.
+
 ```bash
+ssh -i "your-key.pem" ec2-user@your-ec2-ip
+
 sudo yum update -y
 sudo yum install docker -y
 sudo service docker start
 sudo usermod -a -G docker ec2-user
-exec sudo su -l ec2-user
 ```
 
-3. Pull og kjør container:
+4. Pull og kjør containere på EC2:
+
+Kjør disse kommandoene på EC2-instansen:
+
 ```bash
-docker pull <your-docker-hub-username>/taskmanager:latest
-docker run -d -p 80:80 <your-docker-hub-username>/taskmanager:latest
-```
+docker pull <your-dockerhub-account>/taskmanager-frontend:latest
+docker pull <your-dockerhub-account>/taskmanager-backend:latest
 
-### Arkitekturdiagram
-
-```mermaid
-graph TB
-  Internet((Internet))
-  VPC[VPC: 10.0.0.0/16]
-  IG[Internet Gateway]
-  PublicSubnet1[Public Subnet 1]
-  PublicSubnet2[Public Subnet 2]
-  EC2[EC2 Instance]
-  S3[S3 Bucket]
-  RDS[(RDS MySQL)]
-  Docker[Docker Container]
-  App[Python Flask App]
-
-  Internet --> IG
-  IG --> VPC
-  VPC --> PublicSubnet1
-  VPC --> PublicSubnet2
-  PublicSubnet1 --> EC2
-  PublicSubnet2 --> RDS
-  Internet --> S3
-  EC2 --> Docker
-  Docker --> App
-  App --> RDS
+docker run -d --name backend -p 5000:80 <your-dockerhub-account>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <your-dockerhub-account>/taskmanager-frontend:latest
 ```
 
 </details>
 
-<details>
-<summary>Tips for feilsøking</summary>
-
-1. Sjekk container logs:
-```bash
-docker logs $(docker ps -q)
-```
-
-2. Verifiser at container kjører:
-```bash
-docker ps
-```
-
-3. Test API-endepunktet:
-```bash
-curl http://localhost/tasks
-```
-
-</details>
-
-## Oppgave 4: Implementer logging og overvåkning
+## Oppgave 5: Implementer logging og overvåkning
 
 I denne oppgaven skal vi implementere logging og overvåkning for vår backend-applikasjon ved hjelp av Amazon CloudWatch.
 
-### 4a. Konfigurer IAM-rolle for CloudWatch
+### 5a. Konfigurer IAM-rolle for CloudWatch
 - Opprett en IAM-rolle med nødvendige CloudWatch-rettigheter
 - Tildel rollen til EC2-instansen
 - Verifiser at EC2 har tilgang til CloudWatch
 
-### 4b. Konfigurer CloudWatch Agent
+### 5b. Konfigurer CloudWatch Agent
 - Installer CloudWatch Agent på EC2-instansen
 - Opprett konfigurasjonsfil for CloudWatch Agent
 - Konfigurer agenten til å samle CPU, minne og disk metrics
 - Start CloudWatch Agent
 
-### 4c. Modifiser Python-applikasjonen
+### 5c. Modifiser Python-applikasjonen
 - Legg til logging i Python-applikasjonen
 - Konfigurer logging til å skrive til /var/log/taskmanager.log
 - Implementer logging for alle API-kall
 
-### 4d. Opprett CloudWatch Dashboard
+### 5d. Opprett CloudWatch Dashboard
 - Opprett et nytt dashboard kalt "TaskManager-Dashboard"
 - Legg til widgets for CPU, minne og disk metrics
 - Legg til widget for applikasjonslogger
@@ -432,7 +555,7 @@ graph TB
 <details>
 <summary>Løsning</summary>
 
-### 4a. Konfigurer IAM-rolle
+### 5a. Konfigurer IAM-rolle
 
 1. Opprett IAM-rolle:
    - Gå til IAM i AWS Console
@@ -469,7 +592,7 @@ graph TB
    - Klikk "Save"
 
 
-### 4b. Konfigurer CloudWatch Agent
+### 5b. Konfigurer CloudWatch Agent
 
 Først skal vi opprette en CloudWatch log group og deretter konfigurere CloudWatch Agent på EC2-instansen.
 
@@ -535,15 +658,17 @@ cat /opt/aws/amazon-cloudwatch-agent/bin/config.json
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 ```
 
-### 4b. Modifiser Python-applikasjonen
+### 5c. Modifiser Python-applikasjonen
 
 Husk å endre `YOUR_RDS_ENDPOINT` til ditt RDS endpoint. Det finner du i AWS-konsollet på RDS-siden inne på din RDS database.
 
 1. Oppdater app.py med logging:
-```python
+```bash
+cat << 'EOF' > app.py
 import logging
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 logging.basicConfig(
   filename='/var/log/taskmanager.log',
@@ -552,7 +677,15 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your-password>@<YOUR_RDS_ENDPOINT/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -584,15 +717,16 @@ if __name__ == '__main__':
   with app.app_context():    # Add application context
         db.create_all()
   app.run(host='0.0.0.0', port=80)
+EOF
 ```
 
 Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 
 ```bash
+
 # Local machine
-docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest <yourusername>/taskmanager:latest
-docker push <yourusername>/taskmanager:latest
+docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-backend:latest -f Dockerfile-backend .
+docker push <your-dockerhub-account>/taskmanager-backend:latest
 
 # SSH into EC2
 ssh -i "key.pem" ec2-user@your-ec2-ip
@@ -600,14 +734,12 @@ ssh -i "key.pem" ec2-user@your-ec2-ip
 # On EC2
 docker stop $(docker ps -q)  # Stop running container
 docker rm $(docker ps -a -q)  # Remove old container
-docker pull <yourusername>/taskmanager:latest
-docker run -d \
-  -p 80:80 \
-  -v /var/log:/var/log \
-  <yourusername>/taskmanager:latest
+docker pull <your-dockerhub-account>/taskmanager-backend:latest
+docker run -d --name backend -p 5000:80 -v /var/log:/var/log <your-dockerhub-account>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <your-dockerhub-account>/taskmanager-frontend:latest
 
 # Test API med logging
-curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
+curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://<EC2-IP>:5000/tasks
 
 # Verify logs
 tail -f /var/log/taskmanager.log
@@ -628,7 +760,7 @@ Du skal nå også kunne se at disse havner i AWS konsollet i Cloudwatch ved å:
 - Sjekk at JSON-formateringen er korrekt i API-kallet
 - Ved feil, se etter ERROR eller WARN meldinger i loggstrømmen
 
-### 4d. Opprett CloudWatch Dashboard
+### 5d. Opprett CloudWatch Dashboard
 
 1. Gå til CloudWatch i AWS Console
 2. Velg "Dashboards" → "Create dashboard"
@@ -639,7 +771,7 @@ Du skal nå også kunne se at disse havner i AWS konsollet i Cloudwatch ved å:
 5. Trykk på `Save` øverst i høyre hjørne for å lagre Dashboard
 </details>
 
-## Oppgave 5: Custom CloudWatch Metrics
+## Oppgave 6: Custom CloudWatch Metrics
 
 I denne oppgaven skal du implementere custom metrics for å spore aktiviteten i oppgavestyringssystemet.
 
@@ -651,7 +783,7 @@ I denne oppgaven skal du implementere custom metrics for å spore aktiviteten i 
 2. Konfigurer IAM rolle for CloudWatch metrics på EC2-instansen
 3. Legg til metrikk-widgets i CloudWatch dashboard
 
-### 5a. Implementer Custom Metrics
+### 6a. Implementer Custom Metrics
 
 Oppdater Python-applikasjonen for å inkludere custom metrics:
 
@@ -675,6 +807,7 @@ flask
 flask-sqlalchemy
 pymysql
 boto3
+flask-cors
 ```
 
 2. Oppdater app.py med custom metrics: (TODO: ADD GIT DIFF)
@@ -745,13 +878,13 @@ Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 ```bash
 # Local machine
 docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest flaattengokstad/taskmanager:latest
-docker push flaattengokstad/taskmanager:latest
+docker tag taskmanager:latest <your-dockerhub-account>/taskmanager:latest
+docker push <your-dockerhub-account>/taskmanager:latest
 ```
 
 </details> 
 
-### 5b. Konfigurere IAM rolle for CloudWatch Metrics
+### 6b. Konfigurere IAM rolle for CloudWatch Metrics
 
 Oppdater IAM rollen til å inkludere mulighet for å sende metrics til CloudWatch. Bruk `"cloudwatch:PutMetricData"` i actions. 
 
@@ -788,7 +921,7 @@ Oppdater IAM rollen til å inkludere mulighet for å sende metrics til CloudWatc
 
 </details>
 
-### 5c. Deploy det nye Docker imaget på EC2-instansen
+### 6c. Deploy det nye Docker imaget på EC2-instansen
 
 Det nye Docker imaget inneholder ny kode som pusher opp custom metrics til Cloudwatch. Vi skal nå kjøre i gang dette imaget. 
 
@@ -799,17 +932,17 @@ ssh -i "key.pem" ec2-user@your-ec2-ip
 # On EC2
 docker stop $(docker ps -q)  # Stop running container
 docker rm $(docker ps -a -q)  # Remove old container
-docker pull flaattengokstad/taskmanager:latest
+docker pull <your-dockerhub-account>/taskmanager:latest
 docker run -d \
   -p 80:80 \
   -v /var/log:/var/log \
-  flaattengokstad/taskmanager:latest
+  <your-dockerhub-account>/taskmanager:latest
 
 # Test API med logging
 curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
 ```
 
-### 5d. Konfigurer Dashboard
+### 6d. Konfigurer Dashboard
 
 Sett opp et CloudWatch DashBoard som viser den nye metrikken `TaskManagerMetrics`.
 
