@@ -20,6 +20,12 @@ I dette kurset skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tj
 > [!NOTE]
 > **Hvis du bruker Windows er det lurt å laste ned Git Bash og bruke det som terminal for oppgavene, fremfor f.eks. PowerShell som er typisk på Windows. Du vil da kunne kjøre samme kommandoer som vist i ukesoppgavene Se video for hvordan Git Bash installeres [her](https://www.youtube.com/watch?v=qdwWe9COT9k).**
 
+
+
+
+
+
+
 # Oppgaver: Oppgavestyringssystem i AWS
 
 I disse oppgavene skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tjenester. Vi vil fokusere på å bruke AWS Console, VPC, EC2, ECS, CloudWatch, IAM, S3 og RDS. Oppgavene bygger på hverandre, så sørg for å fullføre dem i rekkefølge.
@@ -84,26 +90,37 @@ graph TB
    - Number of private subnets: 0
    - NAT gateways: None
    - VPC endpoints: None
+   - DNS options (Enable DNS hostnames): Aktivert
+   - DNS options (Enable DNS resolution): Aktivert
 5. Klikk på \"Create VPC\".
 
 ### 1b. Opprett en EC2-instans
 
-1. Gå til EC2-konsollet i AWS.
-2. Klikk på \"Launch instance\".
-3. Velg Amazon Linux 2 AMI.
-4. Velg t2.micro instanstype.
-5. Konfigurer instansdetaljer:
-   - Network: Velg den nyopprettede VPC-en
-   - Subnet: Velg et av de offentlige subnettene
-6. Konfigurer Security Group:
-   - Opprett en ny security group
-   - Legg til regel for SSH (port 22) og HTTP (port 80)
-7. Gjennomgå og launch instansen.
+- Gå til EC2 Dashboard
+    - Klikk "Launch Instance"
+    - Gi den et navn
+    - Velg Amazon Linux 2 AMI
+    - Velg t2.micro instance type
+    - Ved "Key pair (login)":
+      * Velg "Create new key pair"
+      * Gi key pair et navn (f.eks. "taskmanager-key")
+      * Velg RSA og .pem format
+      * Last ned key pair-filen og lagre den sikkert
+      * Endre tillatelser på key pair: `chmod 400 taskmanager-key.pem`
+    - Konfigurer \"Network Settings \" -> Trykk på Edit
+        - Konfigurer instance details: Velg ditt VPC og **public** subnettet (se på navnet for å vite at det er public) i sone `eu-west-1a`
+        - `Auto-assign public IP`: Enable
+        - `Firewall`: Create Security Group
+            - Gi den et navn
+            - Inbound Security Group Rules: 
+                - Type: ssh, Protocol: TCP, Port range: 22, Source Type: anywhere
+                - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: 0.0.0.0/0 (anywhere)
+    - Launch instance
 
 ### 1c. Opprett en S3-bucket
 
 1. Gå til S3-konsollet i AWS.
-2. Klikk på \"Create bucket\".
+2. Klikk på \"Create bucket\" -> General Purpose
 3. Velg et unikt navn for bucketen (f.eks. oppgavestyring-filer-\<ditt-navn\>).
 4. La alle andre innstillinger være som standard.
 5. Klikk på \"Create bucket\".
@@ -117,10 +134,10 @@ Du har nå satt opp grunnleggende infrastruktur for oppgavestyringssystemet vår
 I denne oppgaven skal vi sette opp en MySQL-database ved hjelp av Amazon RDS for å lagre oppgaver og brukerinformasjon.
 
 Opprett en Amazon RDS MySQL-instans med følgende spesifikasjoner:
+- Easy Create
 - Engine: MySQL
-- Instance class: db.t4g.micro (Free Tier eligible)
-- Multi-AZ deployment: No
-- Initial database name: taskmanager
+- Instance class: Free Tier (db.t4g.micro)
+- DB Instance Identifier: taskmanager 
 - Plasser den i samme VPC som EC2-instansen, men i et annet subnet
 - Bruk `Connect to an EC2 compute resource` for å sørge for at RDS-instansen tillater innkommende trafikk på port 3306 (MySQL) fra EC2-instansens security group.
 
@@ -151,10 +168,9 @@ graph TB
 <details>
 <summary>Løsning</summary>
 
-> [!WARNING]
-> Se bilde i steg 4. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`
+**Se bilde i steg 4. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`**
 
-![Screenshot of AWS RDS Free Tier](../../../static/img/rds-free-tier.png)
+![Screenshot of AWS RDS Free Tier](../static/img/rds-free-tier.png)
 
 1. Gå til RDS-konsollet i AWS.
 2. Klikk på \"Create database\".
@@ -180,7 +196,7 @@ graph TB
 
 Trykk `Close` hvis du får følgende popup:
 
-![Screenshot of AWS RDS Free Tier](../../../static/img/rds-create-popup.png)
+![Screenshot of AWS RDS Free Tier](../static/img/rds-create-popup.png)
 
 Nå har du satt opp en MySQL-database og konfigurert sikkerhetsgrupper for å tillate tilkobling fra EC2-instansen.
 
@@ -199,7 +215,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:your_password@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -274,7 +290,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:your_password@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -316,9 +332,9 @@ CMD ["python", "app.py"]
 
 2. Bygg og push Docker image:
 ```bash
-docker build -t taskmanager .
-docker tag taskmanager:latest your-docker-hub-username/taskmanager:latest
-docker push your-docker-hub-username/taskmanager:latest
+docker build --platform linux/amd64 -t taskmanager .
+docker tag taskmanager:latest <your-docker-hub-username>/taskmanager:latest
+docker push <your-docker-hub-username>/taskmanager:latest
 ```
 
 ### 3c. Kjør på EC2
@@ -334,12 +350,13 @@ sudo yum update -y
 sudo yum install docker -y
 sudo service docker start
 sudo usermod -a -G docker ec2-user
+exec sudo su -l ec2-user
 ```
 
 3. Pull og kjør container:
 ```bash
-docker pull your-docker-hub-username/taskmanager:latest
-docker run -d -p 80:80 your-docker-hub-username/taskmanager:latest
+docker pull <your-docker-hub-username>/taskmanager:latest
+docker run -d -p 80:80 <your-docker-hub-username>/taskmanager:latest
 ```
 
 ### Arkitekturdiagram
@@ -395,18 +412,23 @@ curl http://localhost/tasks
 
 I denne oppgaven skal vi implementere logging og overvåkning for vår backend-applikasjon ved hjelp av Amazon CloudWatch.
 
-### 4a. Konfigurer CloudWatch Agent
+### 4a. Konfigurer IAM-rolle for CloudWatch
+- Opprett en IAM-rolle med nødvendige CloudWatch-rettigheter
+- Tildel rollen til EC2-instansen
+- Verifiser at EC2 har tilgang til CloudWatch
+
+### 4b. Konfigurer CloudWatch Agent
 - Installer CloudWatch Agent på EC2-instansen
 - Opprett konfigurasjonsfil for CloudWatch Agent
 - Konfigurer agenten til å samle CPU, minne og disk metrics
 - Start CloudWatch Agent
 
-### 4b. Modifiser Python-applikasjonen
+### 4c. Modifiser Python-applikasjonen
 - Legg til logging i Python-applikasjonen
 - Konfigurer logging til å skrive til /var/log/taskmanager.log
 - Implementer logging for alle API-kall
 
-### 4c. Opprett CloudWatch Dashboard
+### 4d. Opprett CloudWatch Dashboard
 - Opprett et nytt dashboard kalt "TaskManager-Dashboard"
 - Legg til widgets for CPU, minne og disk metrics
 - Legg til widget for applikasjonslogger
@@ -438,56 +460,105 @@ graph TB
 <details>
 <summary>Løsning</summary>
 
-### 4a. Konfigurer CloudWatch Agent
+### 4a. Konfigurer IAM-rolle
 
-1. Koble til EC2-instansen og installer CloudWatch Agent:
+1. Opprett IAM-rolle:
+   - Gå til IAM i AWS Console
+   - Velg "Roles" -> "Create role"
+   - Velg "AWS service" og "EC2" -> Next
+   - Legg til "Permissions Policy" som heter `AWSOpsWorksCloudWatchLogs`. Den har følgende policy:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+  - Gi rollen et navn
+  - Bekreft at `AWSOpsWorksCloudWatchLogs` ligger under `Permissions policy summary`
+  - Trykk på `Create role`
+
+2. Tildel rollen til EC2:
+   - Gå til EC2 i AWS Console
+   - Velg din instans
+   - Gå til `Actions` (knapp i høyre hjørne) -> `Security` -> Modify IAM role
+   - Velg den nye rollen
+   - Klikk "Save"
+
+
+### 4b. Konfigurer CloudWatch Agent
+
+Først skal vi opprette en CloudWatch log group og deretter konfigurere CloudWatch Agent på EC2-instansen.
+
+1. Opprett CloudWatch log group:
+    - Gå til CloudWatch i AWS-konsollet
+    - Klikk på "Log groups" i venstremenyen
+    - Klikk på "Create log group" knappen
+    - I "Log group name" feltet, skriv inn "taskmanager-logs"
+    - La andre innstillinger være som standard
+    - Klikk "Create" knappen for å opprette log gruppen
+
+2. Koble til EC2-instansen og installer CloudWatch Agent:
 ```bash
 sudo yum install amazon-cloudwatch-agent -y
 ```
 
-2. Opprett konfigurasjonsfil:
+3. Opprett konfigurasjonsfil:
 ```bash
-sudo nano /opt/aws/amazon-cloudwatch-agent/bin/config.json
-```
-
-3. Legg inn følgende konfigurasjon:
-```json
+sudo tee /opt/aws/amazon-cloudwatch-agent/bin/config.json << 'EOF'
 {
   "agent": {
-  "metrics_collection_interval": 60,
-  "run_as_user": "root"
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
   },
   "logs": {
-  "logs_collected": {
-    "files": {
-    "collect_list": [
-      {
-      "file_path": "/var/log/taskmanager.log",
-      "log_group_name": "taskmanager-logs",
-      "log_stream_name": "{instance_id}"
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/taskmanager.log",
+            "log_group_name": "taskmanager-logs",
+            "log_stream_name": "{instance_id}"
+          }
+        ]
       }
-    ]
     }
-  }
   },
   "metrics": {
-  "metrics_collected": {
-    "cpu": {
-    "measurement": ["cpu_usage_idle", "cpu_usage_user", "cpu_usage_system"]
-    },
-    "memory": {
-    "measurement": ["mem_used_percent"]
-    },
-    "disk": {
-    "measurement": ["used_percent"],
-    "resources": ["/"]
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["cpu_usage_idle", "cpu_usage_user", "cpu_usage_system"]
+      },
+      "memory": {
+        "measurement": ["mem_used_percent"]
+      },
+      "disk": {
+        "measurement": ["used_percent"],
+        "resources": ["/"]
+      }
     }
   }
-  }
 }
+EOF
 ```
 
-4. Start agenten:
+4. Verifiser at konfigurasjonsfilen ble opprettet:
+```bash
+cat /opt/aws/amazon-cloudwatch-agent/bin/config.json
+```
+
+5. Start agenten:
 ```bash
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 ```
@@ -509,7 +580,7 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:your_password@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -538,24 +609,39 @@ def create_task():
     return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-  db.create_all()
+  with app.app_context():    # Add application context
+        db.create_all()
   app.run(host='0.0.0.0', port=80)
 ```
 
-### 4c. Opprett CloudWatch Dashboard
+Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 
-1. Gå til CloudWatch i AWS Console
-2. Velg "Dashboards" → "Create dashboard"
-3. Gi dashboardet navnet "TaskManager-Dashboard"
-4. Legg til widgets:
-   - CPU Utilization
-   - Memory Usage
-   - Disk Usage
-   - Log widget for taskmanager-logs
+```bash
+# Local machine
+docker build --platform linux/amd64 -t taskmanager .
+docker tag taskmanager:latest <yourusername>/taskmanager:latest
+docker push <yourusername>/taskmanager:latest
 
-### Verifisere at logger havner i AWS Cloudwatch
+# SSH into EC2
+ssh -i "key.pem" ec2-user@your-ec2-ip
 
-For å teste via AWS konsollen:
+# On EC2
+docker stop $(docker ps -q)  # Stop running container
+docker rm $(docker ps -a -q)  # Remove old container
+docker pull <yourusername>/taskmanager:latest
+docker run -d \
+  -p 80:80 \
+  -v /var/log:/var/log \
+  <yourusername>/taskmanager:latest
+
+# Test API med logging
+curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
+
+# Verify logs
+tail -f /var/log/taskmanager.log
+```
+
+Du skal nå også kunne se at disse havner i AWS konsollet i Cloudwatch ved å:
 
 1. Logg inn på AWS Management Console
 2. Navigér til CloudWatch tjenesten
@@ -570,15 +656,15 @@ For å teste via AWS konsollen:
 - Sjekk at JSON-formateringen er korrekt i API-kallet
 - Ved feil, se etter ERROR eller WARN meldinger i loggstrømmen
 
-Test oppsett ved å kjøre:
-```bash
-# Sjekk logger
-aws logs tail taskmanager-logs
+### 4d. Opprett CloudWatch Dashboard
 
-# Test API med logging
-curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
-```
-
+1. Gå til CloudWatch i AWS Console
+2. Velg "Dashboards" → "Create dashboard"
+3. Gi dashboardet navnet "TaskManager-Dashboard"
+4. Legg til widgets (line):
+   - Data Type: Metrics, Widget Type: Line -> CPU Utilization
+   - Data Type: Logs, Widget Type: Logs Table -> Selection Criteria: `taskmanager-logs` -> `Create widget`
+5. Trykk på `Save` øverst i høyre hjørne for å lagre Dashboard
 </details>
 
 ## Oppgave 5: Custom CloudWatch Metrics
@@ -636,9 +722,9 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:your_password@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
-cloudwatch = boto3.client('cloudwatch')
+cloudwatch = boto3.client('cloudwatch', region_name='eu-west-1')
 
 class Task(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -675,6 +761,20 @@ def create_task():
   except Exception as e:
     logging.error(f'Error creating task: {str(e)}')
     return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+  with app.app_context():    # Add application context
+        db.create_all()
+  app.run(host='0.0.0.0', port=80)
+```
+
+Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
+
+```bash
+# Local machine
+docker build --platform linux/amd64 -t taskmanager .
+docker tag taskmanager:latest flaattengokstad/taskmanager:latest
+docker push flaattengokstad/taskmanager:latest
 ```
 
 </details> 
@@ -688,7 +788,7 @@ Oppdater IAM rollen til å inkludere mulighet for å sende metrics til CloudWatc
 
 1. Verifiser at EC2-instansen har riktige IAM-rettigheter:
 - Gå til IAM console og finn rollen til EC2-instansen din
-- Oppdater IAM role med følgende policy:
+- Oppdater IAM rollen ved å trykke på `Add permissions` -> `Create inline policy` -> `JSON` -> og copy-paste JSON under:
 ```json
 {
   "Version": "2012-10-17",
@@ -703,10 +803,41 @@ Oppdater IAM rollen til å inkludere mulighet for å sende metrics til CloudWatc
   ]
 }
 ```
+- Trykk på `Next`
+- Gi den et navn, f.eks. `PutMetricDataPolicy`
+- Valider at du får opp følgende under `Permissions defined in this policy`:
+  ``` 
+  CloudWatch
+  Limited: Write
+  All resources
+  None
+  ```
+- Trykk på `Create Policy`
 
 </details>
 
-### 5c. Konfigurer Dashboard
+### 5c. Deploy det nye Docker imaget på EC2-instansen
+
+Det nye Docker imaget inneholder ny kode som pusher opp custom metrics til Cloudwatch. Vi skal nå kjøre i gang dette imaget. 
+
+```bash
+# SSH into EC2
+ssh -i "key.pem" ec2-user@your-ec2-ip
+
+# On EC2
+docker stop $(docker ps -q)  # Stop running container
+docker rm $(docker ps -a -q)  # Remove old container
+docker pull flaattengokstad/taskmanager:latest
+docker run -d \
+  -p 80:80 \
+  -v /var/log:/var/log \
+  flaattengokstad/taskmanager:latest
+
+# Test API med logging
+curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
+```
+
+### 5d. Konfigurer Dashboard
 
 Sett opp et CloudWatch DashBoard som viser den nye metrikken `TaskManagerMetrics`.
 
@@ -726,6 +857,7 @@ Sett opp et CloudWatch DashBoard som viser den nye metrikken `TaskManagerMetrics
    - Under "Browse", velg "TaskManagerMetrics"
    - Velg "TasksCreated" metric
    - Klikk "Create widget"
+   - Trykk på `Save` øverst i høyre hjørne for å lagre Dashboard
 
 3. Konfigurer widget:
    - Endre tidsvindu til "Last hour" (øverst høyre)

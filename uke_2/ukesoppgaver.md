@@ -75,8 +75,6 @@ graph TD
             - Inbound Security Group Rules: 
                 - Type: ssh, Protocol: TCP, Port range: 22, Source Type: anywhere
                 - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: 0.0.0.0/0 (anywhere)
-
-    - Konfigurer security group: Tillat inngående trafikk på port 22 og 80
     - Launch instance
 
 I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing`. Se bilde:

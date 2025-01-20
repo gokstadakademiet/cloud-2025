@@ -38,6 +38,9 @@ for md_file in $(ls "$SOURCE_DIR"/*.md | sort); do
     echo "\n\n" >> "$TARGET_FILE"
 done
 
+echo "Fixing image paths..."
+sed -i '' 's|\.\./\.\./\.\./static/img/|\.\./static/img/|g' "$TARGET_FILE"
+
 echo "# Sletting av ressurser i etterkant:
 
 Resource Explorer klarer ikke alltid å finne RDS databaser, så disse må slettes manuelt. Dette gjøres ved å gå til RDS i konsollen, velge databasen og slette den.

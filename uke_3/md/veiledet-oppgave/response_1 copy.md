@@ -140,7 +140,8 @@ graph TB
 <details>
 <summary>Løsning</summary>
 
-**Se bilde i steg 4. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`**
+> [!WARNING]
+> Se bilde i steg 4. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`
 
 ![Screenshot of AWS RDS Free Tier](../../../static/img/rds-free-tier.png)
 
@@ -187,7 +188,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:passordd@database-1.c7g8yamuicvd.eu-west-1.rds.amazonaws.com/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -262,7 +263,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:passordd@database-1.c7g8yamuicvd.eu-west-1.rds.amazonaws.com/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -305,8 +306,8 @@ CMD ["python", "app.py"]
 2. Bygg og push Docker image:
 ```bash
 docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest <your-docker-hub-username>/taskmanager:latest
-docker push <your-docker-hub-username>/taskmanager:latest
+docker tag taskmanager:latest flaattengokstad/taskmanager:latest
+docker push flaattengokstad/taskmanager:latest
 ```
 
 ### 3c. Kjør på EC2
@@ -327,8 +328,8 @@ exec sudo su -l ec2-user
 
 3. Pull og kjør container:
 ```bash
-docker pull <your-docker-hub-username>/taskmanager:latest
-docker run -d -p 80:80 <your-docker-hub-username>/taskmanager:latest
+docker pull flaattengokstad/taskmanager:latest
+docker run -d -p 80:80 flaattengokstad/taskmanager:latest
 ```
 
 ### Arkitekturdiagram
@@ -468,7 +469,6 @@ graph TB
    - Velg den nye rollen
    - Klikk "Save"
 
-
 ### 4b. Konfigurer CloudWatch Agent
 
 Først skal vi opprette en CloudWatch log group og deretter konfigurere CloudWatch Agent på EC2-instansen.
@@ -535,7 +535,7 @@ cat /opt/aws/amazon-cloudwatch-agent/bin/config.json
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 ```
 
-### 4b. Modifiser Python-applikasjonen
+### 4c. Modifiser Python-applikasjonen
 
 Husk å endre `YOUR_RDS_ENDPOINT` til ditt RDS endpoint. Det finner du i AWS-konsollet på RDS-siden inne på din RDS database.
 
@@ -552,7 +552,7 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:passordd@database-1.c7g8yamuicvd.eu-west-1.rds.amazonaws.com/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -591,8 +591,8 @@ Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 ```bash
 # Local machine
 docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest <yourusername>/taskmanager:latest
-docker push <yourusername>/taskmanager:latest
+docker tag taskmanager:latest flaattengokstad/taskmanager:latest
+docker push flaattengokstad/taskmanager:latest
 
 # SSH into EC2
 ssh -i "key.pem" ec2-user@your-ec2-ip
@@ -600,11 +600,11 @@ ssh -i "key.pem" ec2-user@your-ec2-ip
 # On EC2
 docker stop $(docker ps -q)  # Stop running container
 docker rm $(docker ps -a -q)  # Remove old container
-docker pull <yourusername>/taskmanager:latest
+docker pull flaattengokstad/taskmanager:latest
 docker run -d \
   -p 80:80 \
   -v /var/log:/var/log \
-  <yourusername>/taskmanager:latest
+  flaattengokstad/taskmanager:latest
 
 # Test API med logging
 curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
@@ -694,9 +694,9 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:passordd@database-1.c7g8yamuicvd.eu-west-1.rds.amazonaws.com/taskmanager'
 db = SQLAlchemy(app)
-cloudwatch = boto3.client('cloudwatch', region_name='eu-west-1')
+cloudwatch = boto3.client('cloudwatch')
 
 class Task(db.Model):
   id = db.Column(db.Integer, primary_key=True)
