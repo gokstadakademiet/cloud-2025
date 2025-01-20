@@ -468,12 +468,12 @@ EOF
 docker login
 
 # Bygg images
-docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-backend:latest -f Dockerfile-backend .
-docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-frontend:latest -f Dockerfile-frontend .
+docker build --platform linux/amd64 -t <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest -f Dockerfile-backend .
+docker build --platform linux/amd64 -t <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest -f Dockerfile-frontend .
 
 # Push til Docker Hub
-docker push <your-dockerhub-account>/taskmanager-frontend:latest
-docker push <your-dockerhub-account>/taskmanager-backend:latest
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 ```
 
 3. Installer Docker på EC2:
@@ -494,11 +494,11 @@ sudo usermod -a -G docker ec2-user
 Kjør disse kommandoene på EC2-instansen:
 
 ```bash
-docker pull <your-dockerhub-account>/taskmanager-frontend:latest
-docker pull <your-dockerhub-account>/taskmanager-backend:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 
-docker run -d --name backend -p 5000:80 <your-dockerhub-account>/taskmanager-backend:latest
-docker run -d --name frontend -p 80:80 <your-dockerhub-account>/taskmanager-frontend:latest
+docker run -d --name backend -p 5000:80 <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
 ```
 
 </details>
@@ -685,7 +685,7 @@ CORS(app, resources={
     }
 })
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your-password>@<YOUR_RDS_ENDPOINT/taskmanager'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<YOUR_PASSWORD>@<YOUR_RDS_ENDPOINT/taskmanager'
 db = SQLAlchemy(app)
 
 class Task(db.Model):
@@ -725,8 +725,8 @@ Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 ```bash
 
 # Local machine
-docker build --platform linux/amd64 -t <your-dockerhub-account>/taskmanager-backend:latest -f Dockerfile-backend .
-docker push <your-dockerhub-account>/taskmanager-backend:latest
+docker build --platform linux/amd64 -t <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest -f Dockerfile-backend .
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 
 # SSH into EC2
 ssh -i "key.pem" ec2-user@your-ec2-ip
@@ -734,9 +734,9 @@ ssh -i "key.pem" ec2-user@your-ec2-ip
 # On EC2
 docker stop $(docker ps -q)  # Stop running container
 docker rm $(docker ps -a -q)  # Remove old container
-docker pull <your-dockerhub-account>/taskmanager-backend:latest
-docker run -d --name backend -p 5000:80 -v /var/log:/var/log <your-dockerhub-account>/taskmanager-backend:latest
-docker run -d --name frontend -p 80:80 <your-dockerhub-account>/taskmanager-frontend:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker run -d --name backend -p 5000:80 -v /var/log:/var/log <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
 
 # Test API med logging
 curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://<EC2-IP>:5000/tasks
@@ -827,6 +827,14 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<your_password>@<YOUR_RDS_ENDPOINT>/taskmanager'
 db = SQLAlchemy(app)
 cloudwatch = boto3.client('cloudwatch', region_name='eu-west-1')
@@ -877,9 +885,8 @@ Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
 
 ```bash
 # Local machine
-docker build --platform linux/amd64 -t taskmanager .
-docker tag taskmanager:latest <your-dockerhub-account>/taskmanager:latest
-docker push <your-dockerhub-account>/taskmanager:latest
+docker build --platform linux/amd64 -t <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest -f Dockerfile-backend .
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 ```
 
 </details> 
@@ -932,11 +939,11 @@ ssh -i "key.pem" ec2-user@your-ec2-ip
 # On EC2
 docker stop $(docker ps -q)  # Stop running container
 docker rm $(docker ps -a -q)  # Remove old container
-docker pull <your-dockerhub-account>/taskmanager:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 docker run -d \
-  -p 80:80 \
+  -p 5000:80 \
   -v /var/log:/var/log \
-  <your-dockerhub-account>/taskmanager:latest
+  <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
 
 # Test API med logging
 curl -X POST -H "Content-Type: application/json" -d '{"title":"Test Task"}' http://localhost/tasks
@@ -988,3 +995,359 @@ Sett opp et CloudWatch DashBoard som viser den nye metrikken `TaskManagerMetrics
 > CloudWatch metrics har typisk 1-2 minutters forsinkelse før de vises i dashboard.
 
 </details>
+
+## Oppgave 7: Implementer bildeopplasting for oppgaver
+
+I denne oppgaven skal vi legge til støtte for å laste opp bilder sammen med oppgaver. Bildene skal lagres i S3-bucketen vi opprettet tidligere.
+
+### Oppgavebeskrivelse:
+
+1. Oppdater IAM-rollen for EC2 med S3-rettigheter
+2. Konfigurer S3 bucket policy for offentlig tilgang til bilder
+3. Modifiser backend-koden for å håndtere bildeopplasting
+4. Oppdater frontend for å støtte bildeopplasting
+5. Deploy endringene til EC2
+6. Oppdater MySQL-tabellen med den nye kolonnen
+
+### Mermaid-diagram med S3-integrasjon:
+
+```mermaid
+graph TB
+  Internet((Internet))
+  Frontend[Frontend Container]
+  Backend[Backend Container]
+  S3[(S3 Bucket)]
+  RDS[(RDS MySQL)]
+  
+  Internet --> Frontend
+  Frontend --> Backend
+  Backend --> S3
+  Backend --> RDS
+  Internet --> S3
+```
+
+### Løsningsdetaljer:
+
+<details>
+<summary>Løsning</summary>
+
+### 1. Oppdater IAM-rolle
+
+Legg til S3-rettigheter i EC2-instansens IAM-rolle:
+
+1. Gå til IAM i AWS Console
+2. Finn EC2-instansens rolle
+3. Legg til inline policy:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name/*",
+        "arn:aws:s3:::your-bucket-name"
+      ]
+    }
+  ]
+}
+```
+
+### 2. Konfigurer S3 bucket policy
+
+1. Gå til S3-konsollet
+2. Velg din bucket
+3. Under "Permissions" tab, skru av "Block all public access"
+4. Gå til "Bucket policy"
+5. Klikk "Edit" og legg til følgende policy:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::andreas-flatt-bucket-12355/*"
+        }
+    ]
+}
+```
+
+### 3. Oppdater backend-koden
+
+1. Oppdater requirements.txt:
+```bash
+cat << 'EOF' > requirements.txt
+flask
+flask-sqlalchemy
+pymysql
+boto3
+flask-cors
+Pillow
+EOF
+```
+
+2. Oppdater app.py:
+```bash
+cat << 'EOF' > app.py
+import boto3
+import logging
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+import os
+from werkzeug.utils import secure_filename
+from PIL import Image
+from io import BytesIO
+
+logging.basicConfig(
+  filename='/var/log/taskmanager.log',
+  level=logging.INFO,
+  format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:<YOUR_PASSWORD>@<YOUR_RDS_ENDPOINT>/taskmanager'
+db = SQLAlchemy(app)
+s3 = boto3.client('s3')
+cloudwatch = boto3.client('cloudwatch', region_name='eu-west-1')
+BUCKET_NAME = 'andreas-flatt-bucket-12355'
+
+class Task(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  title = db.Column(db.String(100), nullable=False)
+  description = db.Column(db.String(200))
+  status = db.Column(db.String(20), default='To Do')
+  image_url = db.Column(db.String(200))
+
+@app.route('/tasks', methods=['POST'])
+def create_task():
+  try:
+    title = request.form.get('title')
+    description = request.form.get('description', '')
+    image = request.files.get('image')
+    
+    image_url = None
+    if image:
+      filename = secure_filename(image.filename)
+      s3_path = f'task-images/{filename}'
+      
+      # Resize image
+      img = Image.open(image)
+      img.thumbnail((800, 800))
+      buffer = BytesIO()
+      img.save(buffer, format=img.format)
+      buffer.seek(0)
+      
+      # Upload to S3
+      s3.upload_fileobj(
+        buffer,
+        BUCKET_NAME,
+        s3_path,
+        ExtraArgs={'ContentType': image.content_type}
+      )
+      
+      image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{s3_path}"
+    
+    new_task = Task(
+      title=title,
+      description=description,
+      image_url=image_url
+    )
+    db.session.add(new_task)
+    db.session.commit()
+
+    # Send custom metric
+    cloudwatch.put_metric_data(
+      Namespace='TaskManagerMetrics',
+      MetricData=[{
+        'MetricName': 'TasksCreated',
+        'Value': 1,
+        'Unit': 'Count'
+      }]
+    )
+    
+    return jsonify({
+      'id': new_task.id,
+      'title': new_task.title,
+      'description': new_task.description,
+      'status': new_task.status,
+      'image_url': new_task.image_url
+    }), 201
+    
+  except Exception as e:
+    logging.error(f'Error creating task: {str(e)}')
+    return jsonify({'error': str(e)}), 500
+
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+  tasks = Task.query.all()
+  return jsonify([{
+    'id': task.id,
+    'title': task.title,
+    'description': task.description,
+    'status': task.status,
+    'image_url': task.image_url
+  } for task in tasks])
+
+if __name__ == '__main__':
+  with app.app_context():
+    db.create_all()
+  app.run(host='0.0.0.0', port=80)
+EOF
+```
+
+3. Oppdater frontend filer:
+```bash
+cat << 'EOF' > frontend/html/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oppgavestyringssystem</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Oppgavestyringssystem</h1>
+  <div id="task-list"></div>
+  <form id="task-form" enctype="multipart/form-data">
+    <input type="text" id="task-title" placeholder="Oppgavetittel" required>
+    <textarea id="task-description" placeholder="Oppgavebeskrivelse"></textarea>
+    <input type="file" id="task-image" accept="image/*">
+    <button type="submit">Legg til oppgave</button>
+  </form>
+  <script src="script.js"></script>
+</body>
+</html>
+EOF
+
+cat << 'EOF' > frontend/html/script.js
+async function getTasks() {
+  const response = await fetch(`http://${window.location.hostname}:5000/tasks`);
+  const tasks = await response.json();
+  const taskList = document.getElementById('task-list');
+  taskList.innerHTML = '';
+  
+  tasks.forEach(task => {
+    const taskElement = document.createElement('div');
+    taskElement.className = 'task';
+    taskElement.innerHTML = `
+      <h3>${task.title}</h3>
+      <p>${task.description}</p>
+      ${task.image_url ? `<img src="${task.image_url}" alt="Task image">` : ''}
+      <p>Status: ${task.status}</p>
+    `;
+    taskList.appendChild(taskElement);
+  });
+}
+
+document.getElementById('task-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData();
+  formData.append('title', document.getElementById('task-title').value);
+  formData.append('description', document.getElementById('task-description').value);
+  
+  const imageFile = document.getElementById('task-image').files[0];
+  if (imageFile) {
+    formData.append('image', imageFile);
+  }
+  
+  await fetch(`http://${window.location.hostname}:5000/tasks`, {
+    method: 'POST',
+    body: formData
+  });
+  
+  getTasks();
+  e.target.reset();
+});
+
+getTasks();
+EOF
+
+cat << 'EOF' > frontend/html/style.css
+.task img {
+  max-width: 100%;
+  max-height: 300px;
+  margin: 10px 0;
+}
+EOF
+```
+
+### 4. Deploy endringene
+
+1. Bygg og push Docker images:
+```bash
+# Local machine
+docker build --platform linux/amd64 -t >/taskmanager-backend:latest -f Dockerfile-backend .
+docker build --platform linux/amd64 -t <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest -f Dockerfile-frontend .
+
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker push <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+```
+
+2. SSH inn på EC2 og oppdater containers:
+```bash
+ssh -i "your-key.pem" ec2-user@your-ec2-ip
+
+docker stop $(docker ps -q)
+docker rm $(docker ps -a -q)
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+
+docker run -d --name backend -p 5000:80 -v /var/log:/var/log <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+```
+
+3. Test funksjonaliteten:
+- Åpne nettleseren og gå til EC2-instansens public IP
+- Opprett en ny oppgave med et bilde
+- Verifiser at bildet vises i oppgavelisten
+
+### 3.5 Legg til `image_url` kolonne i databasen
+
+SSH inn på EC2-instansen og koble til MySQL-databasen:
+
+```bash
+mysql -h <DIN_RDS_ENDPOINT> -u admin -p
+
+# Når du er koblet til MySQL:
+USE taskmanager;
+ALTER TABLE task ADD COLUMN image_url VARCHAR(200);
+exit;
+```
+
+Start containerne på nytt:
+
+```bash
+docker stop $(docker ps -q)
+docker rm $(docker ps -a -q)
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker pull <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+
+docker run -d --name backend -p 5000:80 -v /var/log:/var/log <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-backend:latest
+docker run -d --name frontend -p 80:80 <YOUR_DOCKERHUB_ACCOUNT>/taskmanager-frontend:latest
+```
+
+Applikasjonen skal nå fungere med bildeopplasting.
+
+</details>
+
+

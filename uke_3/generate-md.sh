@@ -13,11 +13,13 @@ echo "# Innholdsfortegnelse
 # Innholdsfortegnelse 
 
 1. [Oppsett av infrastruktur](#oppgave-1-sett-opp-infrastruktur)
-2. [Sett opp database](#oppgave-2-sett-opp-database)
-3. [Sett opp backend-applikasjon med Docker](#oppgave-3-sett-opp-backend-applikasjon-med-docker)
-4. [Implementer logging og overvåkning](#oppgave-4-implementer-logging-og-overvåkning)
-5. [Custom CloudWatch Metrics](#oppgave-5-custom-cloudwatch-metrics)
-6. [Implementering av AWS Lambda for periodiske oppgaver](#oppgave-6-ekstra-oppgave-for-de-som-vil-teste-er-i-utgangspunktet-neste-ukes-pensum-implementering-av-aws-lambda-for-periodiske-oppgaver)
+2. [Sett opp database i AWS RDS](#oppgave-2-sett-opp-database-i-aws-rds) 
+3. [Konfigurasjon for RDS database på EC2-instansen](#oppgave-3-konfigurasjon-for-rds-database-på-ec2-instansen)
+4. [Sett opp frontend og backend i Docker på EC2-instansen](#oppgave-4-sett-opp-frontend-og-backend-i-docker-på-ec2-instansen)
+5. [Implementer logging og overvåkning](#oppgave-5-implementer-logging-og-overvåkning)
+6. [Custom CloudWatch Metrics](#oppgave-6-custom-cloudwatch-metrics)
+7. [Implementer bildeopplasting for oppgaver](#oppgave-7-implementer-bildeopplasting-for-oppgaver)
+8. [Implementering av AWS Lambda for periodiske oppgaver](#oppgave-8-ekstra-oppgave-for-de-som-vil-teste-er-i-utgangspunktet-neste-ukes-pensum-implementering-av-aws-lambda-for-periodiske-oppgaver)
 " >> "$TARGET_FILE"
 
 echo "# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
