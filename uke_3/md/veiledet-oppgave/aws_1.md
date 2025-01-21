@@ -596,6 +596,8 @@ graph TB
 
 Først skal vi opprette en CloudWatch log group og deretter konfigurere CloudWatch Agent på EC2-instansen.
 
+**Det er viktig at log-groupen kalles eksakt `taskmanager-logs` for at den skal fungere med konfigurasjonsfilen som opprettes hvor `file_path` settes til `/var/log/taskmanager.log`. Det er ingenting i veien for å kalle den noe annet, men du vil du også måtte endre den i konfigurasjonsfilen.**
+
 1. Opprett CloudWatch log group:
     - Gå til CloudWatch i AWS-konsollet
     - Klikk på "Log groups" i venstremenyen
@@ -802,23 +804,25 @@ cloudwatch.put_metric_data(
 <details> <summary>Løsning</summary>
 
 1. Legg til boto3 i `requirements.txt` for å kunne gjøre kall mot AWS i backend-koden: (TODO: ADD GIT DIFF)
-```text
+cat << 'EOF' > requirements.txt
 flask
 flask-sqlalchemy
 pymysql
 boto3
 flask-cors
-```
+EOF
 
 2. Oppdater app.py med custom metrics: (TODO: ADD GIT DIFF)
 
 Husk å endre `YOUR_RDS_ENDPOINT` til ditt RDS endpoint. Det finner du i AWS-konsollet på RDS-siden inne på din RDS database. 
 
 ```python
+cat << 'EOF' > app.py
 import boto3
 import logging
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 logging.basicConfig(
   filename='/var/log/taskmanager.log',
@@ -879,6 +883,7 @@ if __name__ == '__main__':
   with app.app_context():    # Add application context
         db.create_all()
   app.run(host='0.0.0.0', port=80)
+EOF
 ```
 
 Dytt den oppdaterte opp til Dockerhub og pull den ned på EC2-instansen:
