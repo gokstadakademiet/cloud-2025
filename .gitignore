@@ -10,6 +10,8 @@ uke_*
 !uke_1
 !uke_2
 !uke_3
+!uke_4
+!uke_4/ukesoppgaver
 test-uke-1
 **/*-self-notes.md
 **/*tekst.md
@@ -17,3 +19,5 @@ test-uke-1
 **/forelesning.md
 **/archive
 **/not_doing
+
+**/TODO.md
