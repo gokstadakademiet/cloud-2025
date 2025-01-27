@@ -15,8 +15,7 @@ echo "# Innholdsfortegnelse
 3. [Implementer meldingskø med SQS og SNS](#oppgave-3-implementer-meldingskø-med-sqs-og-sns)
 4. [Implementer en enkel frontend på EC2](#oppgave-4-implementer-en-enkel-frontend-på-ec2)
 5. [Implementer logging og overvåking med CloudWatch](#oppgave-5-implementer-logging-og-overvåking-med-cloudwatch)
-6. [Implementer sikker tilgang med IAM og Security Groups](#oppgave-6-implementer-sikker-tilgang-med-iam-og-security-groups)
-7. [Implementer serverløs arkitektur med API Gateway](#oppgave-7-implementer-serverløs-arkitektur-med-api-gateway)
+6. [Sletting av ressurser i etterkant](#sletting-av-ressurser-i-etterkant)
 " >> "$TARGET_FILE"
 
 echo "# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem

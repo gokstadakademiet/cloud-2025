@@ -11,6 +11,7 @@ I denne oppgaven skal du sette opp den grunnleggende infrastrukturen for oppgave
 1. Opprett en VPC med to offentlige subnett i forskjellige availability zones.
 2. Lag en EC2-instans (t2.micro) i ett av subnettene. Denne vil senere brukes som en webserver.
 3. Opprett en RDS MySQL-database i det andre offentlige subnettet.
+4. Opprett en tasks-tabell i databasen.
 
 ### Arkitekturdiagram
 
@@ -68,37 +69,86 @@ graph TD
 
 ### 1c. Opprette RDS database
 
-**Se bilde i steg 4. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`**
+> [!NOTE]
+> RDS krever en `subnet group` som definerer hvilke subnett den kan plasseres i. For denne øvelsen plasserer vi RDS i et offentlig subnet slik at vi kan nå den fra utviklermaskinen vår. I produksjon ville vi typisk plassert RDS i private subnett for bedre sikkerhet.
 
+1. Opprett subnet group:
+  - Gå til RDS-konsollet
+  - Velg "Subnet groups" i venstre meny
+  - Klikk "Create DB Subnet Group"
+  - Name: taskmanager-subnet-group
+  - Description: Subnet group for taskmanager database
+  - VPC: Velg din VPC
+  - Availability Zones: Velg begge AZ-ene
+  - Subnets: Velg begge public subnets
+  - Klikk "Create"
+
+
+2. Gå til RDS-konsollet i AWS.
+3. Klikk på "Create database".
+4. Velg "Standard Create" og MySQL som engine type.
 ![Screenshot of AWS RDS Free Tier](../../../static/img/rds-free-tier.png)
+5. Fyll inn følgende detaljer:
+  - DB instance identifier: taskmanager
+  - Master username: admin
+  - Master password: Velg et passord
+6. Bekreft at DB instance type er satt til Free tier (db.t4g.micro) -> se bilde. De andre typene er ikke under free tier og koster penger.
+7. Under `Connectivity`:
+  - Compute Resource: Kryss av for `Don't connect to an EC2 compute resource`
+  - VPC: Velg din VPC
+  - DB Subnet group: Velg taskmanager-subnet-group
+  - Public access: Yes
+  - VPC security group (firewall): -> `Create new` -> gi den ett navn, f.eks. `rds-sg`, ellers alt på default.
+8. Under "Additional configuration":
+  - Sett initial database name til "taskmanager"
+  - Skru av `Enable automated backups`
+9. La alle andre innstillinger være som standard.
+10. Bekreft kostnadene under "Estimated monthly costs"
+11. Klikk på "Create database". Det tar noen minutter før den er klar.
 
-1. Gå til RDS-konsollet i AWS.
-2. Klikk på "Create database".
-3. Velg "Standard Create" og MySQL som engine type.
-4. Fyll inn følgende detaljer:
-   - DB instance identifier: taskmanager
-   - Master username: admin
-   - Master password: Velg et passord
-5. Bekreft at DB instance type er satt til Free tier (db.4tg.micro) -> se bilde. De andre typene er ikke under free tier og koster penger.
-6. Set up EC2 connection (under `Connectivity`):
-   - Sjekk av på "Connect to an EC2 compute resource" (AWS vil da sette opp nødvendige rettigheter, security groups etc. automatisk for deg slik at EC2-instansen og databasen kan snakke sammen)
-   - Selekter EC2-instansen du skal koble til databasen
-7. Under "Additional configuration":
-   - Sett initial database name til "taskmanager"
-   - Skru av `Enable automated backups`
-8. La alle andre innstillinger være som standard.
-9. Bekrefte at det står noe ala følgende under `Estimated monthly costs`:
-   - The Amazon RDS Free Tier is available to you for 12 months. Each calendar month, the free tier will allow you to use the Amazon RDS resources listed below for free:
-   - 750 hrs of Amazon RDS in a Single-AZ db.t2.micro, db.t3.micro or db.t4g.micro Instance.
-   - 20 GB of General Purpose Storage (SSD).
-   - 20 GB for automated backup storage and any user-initiated DB Snapshots.
-10. Klikk på "Create database". Det tar noen minutter før den er klar (med status `Available`)
+**Se bilde i steg 6. Default selektert RDS Database Instance size koster penger. Selekter `Free Tier` med `tb.t4g.micro`**
 
 Trykk `Close` hvis du får følgende popup:
 
 ![Screenshot of AWS RDS Free Tier](../../../static/img/rds-create-popup.png)
 
-Med denne konfigurasjonen har du nå satt opp grunnleggende infrastruktur for oppgavestyringssystemet. EC2-instansen kan nå kommunisere med RDS-databasen, og vi har lagt grunnlaget for å bygge videre på systemet i de neste oppgavene.
+### 1d. Opprett tasks-tabell
+
+1. SSH inn i EC2-instansen:
+```bash
+# Erstatt din-key.pem med navnet på din private key og EC2_PUBLIC_IP med public IP til din EC2 instans
+ssh -i din-key.pem ec2-user@EC2_PUBLIC_IP
+```
+
+2. Installer MySQL client på EC2-instansen:
+```bash
+sudo dnf update -y
+sudo dnf install mariadb105 -y
+```
+
+3. Koble til RDS-databasen fra EC2-instansen:
+```bash
+mysql -h <RDS_ENDPOINT> -u admin -p
+```
+
+4. Opprett tasks-tabellen:
+
+```sql
+USE taskmanager;
+```
+
+```sql
+CREATE TABLE tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(50) DEFAULT 'Pending'
+);
+```
+
+Du kan nå kjøre `SHOW TABLES` for å verifisere at den nye tabellen er laget.
+
+Med denne konfigurasjonen har du nå satt opp grunnleggende infrastruktur for oppgavestyringssystemet. EC2-instansen kan nå kommunisere med RDS-databasen, og vi har opprettet tasks-tabellen som vil brukes for å lagre oppgaver.
 
 </details>
 
@@ -125,7 +175,7 @@ Følg disse stegene for å sette opp et Lambda Layer med PyMySQL:
 mkdir pymysql-layer
 cd pymysql-layer
 mkdir python
-pip install pymysql -t python/
+pip3 install pymysql -t python/
 zip -r pymysql-layer.zip python/
 ```
 
@@ -135,7 +185,8 @@ zip -r pymysql-layer.zip python/
 - Klikk "Create layer"
 - Gi laget navnet "pymysql-layer"
 - Last opp zip-filen du nettopp opprettet
-- Velg "Compatible runtimes": Python 3.9
+- Huk av på `x86_64` under `Compatible Architectures`
+- Velg "Compatible runtimes": Python 3.13
 - Klikk "Create"
 
 3. Legg til laget i Lambda-funksjonen:
@@ -165,7 +216,31 @@ graph TD
 <details>
 <summary>Løsning</summary>
 
-1. Opprett en kombinert Lambda-funksjon:
+### 1. Opprett Lambda-funksjon
+
+1. Oppdater RDS security group:
+  - Gå til RDS instance
+  - Under "Security", klikk på security group
+  - Legg til inbound rule:
+    - Type: MySQL/Aurora
+    - Source: 0.0.0.0/0 (anywhere)
+
+2. Gå til AWS Lambda i AWS Console
+3. Klikk "Create function"
+4. Velg "Author from scratch"
+5. Under "Basic information":
+  - Function name: "task-management"
+  - Runtime: Python 3.13
+  - Architecture: x86_64
+6. Klikk "Create function"
+7. Vent til lambdaen har provisjonert seg ferdig
+8. Legg til Lambda Layer:
+  - Gå til "Layers" i venstre meny i Lambda-funksjonen
+  - Klikk "Add a layer"
+  - Velg "Custom layers"
+  - Velg "pymysql-layer" som du opprettet tidligere
+  - Klikk "Add"
+9. Under "Code source", lim inn følgende kode:
 
 ```python
 import json
@@ -173,28 +248,38 @@ import pymysql
 
 def get_db_connection():
   return pymysql.connect(
-    host='<RDS_ENDPOINT_FROM_AWS_CONSOLE>',  # Get from RDS console
+    host='taskmanager.c7g8yamuicvd.eu-west-1.rds.amazonaws.com',  # Get from RDS console
     user='admin',  # The username you set when creating RDS
-    password='YOUR_PASSWORD_HERE',  # The password you set when creating RDS  
+    password='passordd',  # The password you set when creating RDS  
     db='taskmanager',  # The database name you created
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor
-    )
+  )
 
 def add_task(event):
+  print(f"Adding new task with event: {event}")  # Log incoming event
   conn = get_db_connection()
   try:
     body = json.loads(event['body'])
+    print(f"Parsed request body: {body}")  # Log parsed body
+    
     with conn.cursor() as cursor:
       sql = "INSERT INTO tasks (title, description, status) VALUES (%s, %s, %s)"
       cursor.execute(sql, (body['title'], body['description'], 'Pending'))
+      task_id = cursor.lastrowid  # Get ID of inserted task
+      print(f"Successfully inserted task with ID: {task_id}")  # Log success
+    
     conn.commit()
     return {
       'statusCode': 200,
-      'body': json.dumps({'message': 'Oppgave lagt til'})
+      'body': json.dumps({'message': 'Oppgave lagt til', 'task_id': task_id})
     }
+  except Exception as e:
+    print(f"Error adding task: {str(e)}")  # Log any errors
+    raise  # Re-raise the exception for proper error handling
   finally:
     conn.close()
+
 
 def get_tasks():
   conn = get_db_connection()
@@ -230,51 +315,64 @@ def lambda_handler(event, context):
     }
 ```
 
-2. Konfigurer IAM-rolle:
-  - Gå til IAM-dashbordet i AWS Console (https://console.aws.amazon.com/iam/)
-  - Klikk på "Roles" i venstre menybar
-  - Klikk på "Create role" knappen
-  - Under "Use cases", velg "AWS Service" og deretter "Lambda"
-  - Klikk "Next"
-  - I søkefeltet, skriv inn følgende policyer og velg dem:
-  - "AWSLambdaBasicExecutionRole" (gir tilgang til CloudWatch Logs)
-  - Klikk "Next"
-  - Gi rollen et beskrivende navn, f.eks. "TaskManagementLambdaRole"
-  - Legg til en beskrivelse (valgfritt)
-  - Klikk "Create role"
+og trykk på `Deploy`. 
 
-3. Test endepunktene:
-  - Åpne Lambda-funksjonen i AWS Console
-  - Gå til "Test" fanen
-  - For å teste POST /tasks:
-  - Klikk "Create new event"
-  - Gi test-eventen et navn, f.eks. "AddTaskTest"
-  - Lim inn følgende JSON:
-```json
-{
-  "httpMethod": "POST",
-  "path": "/tasks",
-  "body": "{\"title\": \"Test oppgave\", \"description\": \"Dette er en test\"}"
-}
-```
+TODO TRENGS DENNE?
+11. Under `Configuration` -> "Function URL":
+  - Klikk "Create function URL"
+  - Auth type: NONE
+  - Under `Additional Settings`: Configure cross-origin resource sharing (CORS): Enable
   - Klikk "Save"
-  - Klikk "Test" for å kjøre testen
 
-  - For å teste GET /tasks:
-  - Klikk "Create new event" igjen
-  - Gi test-eventen et navn, f.eks. "GetTasksTest"
-  - Lim inn følgende JSON:
-```json
-{
-  "httpMethod": "GET",
-  "path": "/tasks"
-}
-```
-  - Klikk "Save"
-  - Klikk "Test" for å kjøre testen
+12. Test Lambda-funksjonen:
 
-  - Se resultatene i "Execution results" seksjonen
-  - Sjekk også CloudWatch Logs for mer detaljerte logger
+  a. Gå til "Test" fanen i Lambda-editoren
+  
+  b. Klikk på "Create new event" knappen
+  
+  c. I dialogboksen som åpnes:
+    - Gi testen et navn (f.eks. "GetTasksTest")
+    - Velg "hello-world" som template
+    - Erstatt hele JSON-innholdet i `Event JSON` med:
+  ```json
+  {
+    "httpMethod": "GET",
+    "path": "/tasks"
+  }
+  ```
+    - Klikk "Save"
+
+  d. Opprett en ny test for å legge til en task:
+    - Klikk "Create new event" igjen
+    - Gi testen navn "AddTaskTest"
+    - Erstatt JSON-innholdet med:
+  ```json
+  {
+    "httpMethod": "POST",
+    "path": "/tasks",
+    "body": "{\"title\":\"Test Task\",\"description\":\"This is a test task\"}"
+  }
+  ```
+    - Klikk "Save"
+
+  e. Kjør begge testene:
+    - Kjør "AddTaskTest" først
+    - Verifiser at responsen viser "Oppgave lagt til"
+    - Kjør deretter "GetTasksTest"
+    - Verifiser at den nye oppgaven vises i listen
+  
+  f. I resultatvinduet som vises:
+    - Verifiser at "Status" viser 200
+    - Sjekk at "Function Logs" ikke viser noen feil
+    - Se at responsen inneholder forventet data
+  
+  g. Hvis du får feil:
+    - Sjekk at database-tilkoblingen er konfigurert riktig
+    - Verifiser at security groups tillater tilkobling
+    - Se på CloudWatch Logs for mer detaljert feilinformasjon
+
+// TODO trengs denne?
+13. Noter ned Function URL - du trenger denne senere for frontend-integrasjon.
 
 </details>
 
@@ -331,7 +429,7 @@ graph TD
 ### Steg 3: Modifisere Lambda Add Task
 
 1. Gå til Lambda i AWS Console
-2. Finn din eksisterende Lambda-funksjon for å legge til oppgaver
+2. Finn din eksisterende Lambda-funksjon for å sende en melding til SNS når det legges til oppgaver
 3. Under "Code source", oppdater koden:
 
 ```python
@@ -339,12 +437,25 @@ import json
 import pymysql
 import boto3
 
+def get_db_connection():
+  return pymysql.connect(
+    host='taskmanager.c7g8yamuicvd.eu-west-1.rds.amazonaws.com',  # Get from RDS console
+    user='admin',  # The username you set when creating RDS
+    password='passordd',  # The password you set when creating RDS  
+    db='taskmanager',  # The database name you created
+    charset='utf8mb4',
+    cursorclass=pymysql.cursors.DictCursor
+  )
+
 def add_task(event):
+  print(f"Adding new task with event: {event}")  # Log incoming event
+  
   # Opprett database-tilkobling
   conn = get_db_connection()
   try:
     # Parse innkommende data
     body = json.loads(event['body'])
+    print(f"Parsed request body: {body}")  # Log parsed body
     
     # Lagre oppgave i public subnet database
     with conn.cursor() as cursor:
@@ -358,21 +469,24 @@ def add_task(event):
       ))
       # Hent ID til ny oppgave
       task_id = cursor.lastrowid
+      print(f"Successfully inserted task with ID: {task_id}")  # Log success
     conn.commit()
     
     # Send melding til SNS
-    sns = boto3.client('sns')
+    sns = boto3.client('sns', region_name='eu-west-1')
     message_body = {
       'task_id': task_id,
       'title': body['title'],
       'description': body['description']
     }
+    print(f"Preparing to send SNS message: {message_body}")  # Log SNS message
     
     sns.publish(
-      TopicArn='YOUR_SNS_TOPIC_ARN_HERE',  # Replace with your SNS Topic ARN from AWS Console
+      TopicArn='arn:aws:sns:eu-west-1:043309361433:new-task-notification',  # Replace with your SNS Topic ARN from AWS Console
       Message=json.dumps(message_body),
       Subject='New Task Added'
     )
+    print("Successfully published to SNS")  # Log SNS success
     
     return {
       'statusCode': 200,
@@ -382,30 +496,81 @@ def add_task(event):
       })
     }
   except Exception as e:
-    print(f"Error: {str(e)}")  # Dette vil logges i CloudWatch
+    print(f"Error in add_task: {str(e)}")  # Enhanced error logging
     return {
       'statusCode': 500,
       'body': json.dumps({'error': str(e)})
     }
   finally:
     conn.close()
+
+def get_tasks():
+  print("Fetching all tasks")  # Log start of get_tasks
+  conn = get_db_connection()
+  try:
+    with conn.cursor() as cursor:
+      cursor.execute("SELECT * FROM tasks")
+      result = cursor.fetchall()
+      print(f"Retrieved {len(result)} tasks")  # Log number of tasks
+    return {
+      'statusCode': 200,
+      'body': json.dumps(result)
+    }
+  except Exception as e:
+    print(f"Error in get_tasks: {str(e)}")  # Log any errors
+    raise  # Re-raise the exception for proper error handling
+  finally:
+    conn.close()
+
+def lambda_handler(event, context):
+  try:
+    event['httpMethod'] = event['requestContext']['http']['method']
+    event['path'] = event['requestContext']['http']['path']
+    event['queryStringParameters'] = event.get('queryStringParameters', {})
+
+    method = event['httpMethod']
+    path = event['path']
+    
+    if method == 'POST' and path == '/tasks':
+      return add_task(event)
+    elif method == 'GET' and path == '/tasks':
+      return get_tasks()
+    else:
+      return {
+      'statusCode': 404,
+      'body': json.dumps({'error': 'Not found'})
+      }
+  except Exception as e:
+    return {
+      'statusCode': 500,
+      'body': json.dumps({'error': str(e)})
+    }
 ```
 
 4. Under "Configuration" -> "Permissions", klikk på IAM role
-5. I IAM Console, legg til følgende policy:
-
+5. I IAM Console, legg til policy for SNS publishing:
+  - Gå til AWS IAM Console
+  - I venstre meny, klikk på "Roles"
+  - Søk etter og klikk på din Lambda-funksjons rolle (starter vanligvis med "task-management-role-")
+  - Klikk på "Add permissions" -> "Create inline policy"
+  - Velg "JSON" fanen
+  - Lim inn følgende policy (erstatt `<REPLACE_WITH_YOUR_SNS_TOPIC_ARN>` med din faktiske SNS Topic ARN fra SNS Console):
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "sns:Publish",
-      "Resource": "<REPLACE_WITH_YOUR_SNS_TOPIC_ARN>"  # Get this from your SNS Topic details in AWS Console
-    }
+   {
+    "Effect": "Allow",
+    "Action": "sns:Publish",
+    "Resource": "<REPLACE_WITH_YOUR_SNS_TOPIC_ARN>"
+   }
   ]
 }
 ```
+  - Klikk på "Review policy"
+  - Gi policyen et navn (f.eks. "SNSPublishPolicy")
+  - Klikk på "Create policy"
+  - Verifiser at den nye policyen vises under "Permissions policies" for rollen
 
 ### Steg 4: Opprette Process Task Lambda
 
@@ -413,11 +578,22 @@ def add_task(event):
 2. Klikk "Create function"
 3. Velg "Author from scratch"
 4. Under "Basic information":
-   - Function name: "process-task"
-   - Runtime: Python 3.9
-   - Architecture: x86_64
+  - Function name: "process-task"
+  - Runtime: Python 3.13
+  - Architecture: x86_64
 5. Klikk "Create function"
-6. Kopier inn følgende kode:
+6. Under "Configuration" -> "General configuration":
+  - Klikk "Edit"
+  - Sett "Timeout" til 15 seconds
+  - Klikk "Save"
+7. Vent til lambdaen har provisjonert seg ferdig
+8. Legg til Lambda Layer:
+  - Gå til "Layers" i venstre meny i Lambda-funksjonen
+  - Klikk "Add a layer"
+  - Velg "Custom layers"
+  - Velg "pymysql-layer" som du opprettet tidligere
+  - Klikk "Add"
+9. Kopier inn følgende kode:
 
 ```python
 import json
@@ -426,90 +602,148 @@ import boto3
 import time
 
 def get_db_connection():
-  return pymysql.connect(
-    host='<RDS_ENDPOINT_FROM_AWS_CONSOLE>',  # Get from RDS console
-    user='admin',  # The username you set when creating RDS
-    password='YOUR_PASSWORD_HERE',  # The password you set when creating RDS  
-    db='taskmanager',  # The database name you created
-    charset='utf8mb4',
-    cursorclass=pymysql.cursors.DictCursor
+    return pymysql.connect(
+        host='taskmanager.c7g8yamuicvd.eu-west-1.rds.amazonaws.com',
+        user='admin',
+        password='passordd',
+        db='taskmanager',
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor
     )
 
 def lambda_handler(event, context):
-  print("Processing task event:", event)  # Debug logging
-  
-  conn = get_db_connection()
-  try:
-    for record in event['Records']:
-      # Parse meldingen fra SQS
-      message = json.loads(record['body'])
-      task_data = json.loads(message['Message'])
-      task_id = task_data['task_id']
-      
-      # Oppdater status til "In Progress"
-      with conn.cursor() as cursor:
-        sql = "UPDATE tasks SET status = %s WHERE id = %s"
-        cursor.execute(sql, ('In Progress', task_id))
-      conn.commit()
-      
-      # Simuler prosessering med 5 sekunders ventetid 
-      time.sleep(5)
-
-      # Oppdater status til "Completed"
-      with conn.cursor() as cursor:
-        sql = "UPDATE tasks SET status = %s WHERE id = %s"
-        cursor.execute(sql, ('Completed', task_id))
-      conn.commit()
-      
-      print(f"Task {task_id} completed successfully")
-      
-    return {
-      'statusCode': 200,
-      'body': json.dumps('Tasks processed successfully')
-    }
-  except Exception as e:
-    print(f"Error processing task: {str(e)}")
-    return {
-      'statusCode': 500,
-      'body': json.dumps({'error': str(e)})
-    }
-  finally:
-    conn.close()
+    print("Processing task event:", event)
+    
+    try:
+        conn = get_db_connection()  # Move inside try block
+        
+        for record in event['Records']:
+            message = json.loads(record['body'])
+            task_data = json.loads(message['Message'])
+            task_id = task_data['task_id']
+            
+            with conn.cursor() as cursor:
+                sql = "UPDATE tasks SET status = %s WHERE id = %s"
+                cursor.execute(sql, ('In Progress', task_id))
+            conn.commit()
+            
+            time.sleep(5)
+            
+            with conn.cursor() as cursor:
+                sql = "UPDATE tasks SET status = %s WHERE id = %s"
+                cursor.execute(sql, ('Completed', task_id))
+            conn.commit()
+            
+            print(f"Task {task_id} completed successfully")
+          
+        # print all tasks completed
+        print("All tasks finished processing")
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Tasks processed successfully')
+        }
+    except Exception as e:
+        print(f"Error processing task: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+    finally:
+        if 'conn' in locals():  # Only close if connection was established
+            conn.close()
 ```
+
+### Steg 5: Opprette SQS trigger og IAM-rolle for Process Task Lambda
+
+Før vi kan bruke SQS som trigger må Lambda-funksjonen ha tillatelse til å lese fra SQS-køen.
+
+1. Gå til Lambda-funksjonen i AWS Console
+2. Under "Configuration" -> "Permissions", klikk på IAM role
+3. I IAM Console:
+  - Klikk "Add permissions" -> "Create inline policy"
+  - Velg "JSON" fanen
+  - Lim inn følgende policy:
+```json
+{
+   "Version": "2012-10-17",
+   "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+           "sqs:ReceiveMessage",
+           "sqs:DeleteMessage",
+           "sqs:GetQueueAttributes"
+        ],
+        "Resource": "arn:aws:sqs:eu-west-1:YOUR_ACCOUNT_ID:task-processing-queue"
+      }
+   ]
+}
+```
+4. Erstatt `YOUR_ACCOUNT_ID` med ditt AWS account ID
+5. Klikk "Review policy"
+6. Gi policyen et navn (f.eks. "SQSReceivePolicy")
+7. Klikk "Create policy"
+8. Legg til SQS trigger i Lambda Funksjonen:
+  - Gå til "Function overview"
+  - Klikk "Add trigger"
+  - Velg "SQS" fra listen
+  - Velg din SQS kø fra dropdown
+  - Batch size: 1
+  - La andre innstillinger være som standard
+  - Klikk "Add"
 
 ### Steg 5: Konfigurere SNS til SQS
 
 1. Gå tilbake til SNS Topic
 2. Klikk "Create subscription"
 3. Under "Details":
-   - Protocol: Amazon SQS
-   - Endpoint: Velg din SQS kø fra dropdown
+  - Protocol: Amazon SQS
+  - Endpoint: Velg din SQS kø fra dropdown
 4. Klikk "Create subscription"
 
 ### Testing av løsningen
 
 1. Test add_task Lambda:
-   ```json
-   {
-   "body": "{\"title\": \"Test Oppgave\", \"description\": \"Dette er en test oppgave\"}"
-   }
-   ```
+  ```json
+  {
+    "Records": [
+        {
+            "messageId": "29ce3c25-141d-4675-8d38-b6d0ac7ed42a",
+            "receiptHandle": "AQEBlJe7QjuukDhJk0uzJTNRn0yIkTzpoxNbOL+ibEntuixJt24z9nPcRajeZPjIgrP6fskHNfPaoALv7snkS15hNQyXHkAbIVubZ4KToUzXYmFkcHDkWV28aof3h/kcN+a++R3vKEIU+U7unJVU9BTjVxpgiBG8y15TAXduMzyiG6xY+bV56NYcnqzVLfh0/38/LbbyqMRePutTG68jUG1qHhc7tGjWm0MxUlSkYCagTuzW4FbNBmdgqxbbgvjVUai2DFqFS+C4p7w5QQneTzMdqNXuEivi24PhOcIuz5dnLqAXL+Wfal9Qplzqe9Uw5zGf5SKBrmcV/tOV4fhGijHDXgUuthLmQDUK+eeSdb646mffHyrty5N+6Tco29ekdXAN",
+            "body": "{\n  \"Type\" : \"Notification\",\n  \"MessageId\" : \"fad20310-9642-5c51-9eac-6301ac3fc58c\",\n  \"TopicArn\" : \"arn:aws:sns:eu-west-1:043309361433:new-task-notification\",\n  \"Subject\" : \"New Task Added\",\n  \"Message\" : \"{\\\"task_id\\\": 7, \\\"title\\\": \\\"Test Task\\\", \\\"description\\\": \\\"This is a test task\\\"}\",\n  \"Timestamp\" : \"2025-01-27T07:39:41.387Z\",\n  \"SignatureVersion\" : \"1\"}",
+            "attributes": {
+                "ApproximateReceiveCount": "889",
+                "AWSTraceHeader": "Root=1-6797383c-04bb76331b7f67185f53c060;Parent=5d84e81c2ab91f37;Sampled=0;Lineage=1:890bcd31:0",
+                "SentTimestamp": "1737963581406",
+                "SenderId": "AIDAISMY7JYY5F7RTT6AO",
+                "ApproximateFirstReceiveTimestamp": "1737963581417"
+            },
+            "messageAttributes": {},
+            "md5OfBody": "aec37728699accb4f0d795b8703fef00",
+            "eventSource": "aws:sqs",
+            "eventSourceARN": "arn:aws:sqs:eu-west-1:043309361433:tasks",
+            "awsRegion": "eu-west-1"
+        }
+    ]
+}
+  ```
 
 2. Sjekk CloudWatch Logs:
-   - Gå til CloudWatch
-   - Klikk på "Log groups"
-   - Find loggruppen for hver Lambda-funksjon
-   - Se etter nye loggoppføringer
+  - Gå til CloudWatch
+  - Klikk på "Log groups"
+  - Find loggruppen for hver Lambda-funksjon
+  - Se etter nye loggoppføringer
 
 3. Sjekk database:
-   ```sql
-   SELECT * FROM tasks ORDER BY id DESC LIMIT 1;
-   ```
+  ```sql
+  SELECT * FROM tasks ORDER BY id DESC LIMIT 1;
+  ```
 
 4. Verifiser meldingsflyt:
-   - Gå til SQS Queue
-   - Se på "Monitoring" fanen
-   - Sjekk "Messages Available" og "Messages In Flight"
+  - Gå til SQS Queue
+  - Se på "Monitoring" fanen
+  - Sjekk "Messages Available" og "Messages In Flight"
 
 Feilsøking:
 - Hvis meldinger ikke kommer frem, sjekk IAM-tillatelser
@@ -532,9 +766,10 @@ I denne oppgaven skal du implementere en enkel webbasert frontend for oppgavesty
 > - Apache er enklere å sette opp når vi kun trenger grunnleggende funksjonalitet
 
 1. Installer og konfigurer Apache webserver på EC2-instansen
-2. Opprett en enkel HTML-side som viser alle oppgaver fra systemet
-3. Implementer et skjema for å legge til nye oppgaver
-4. Test løsningen grundig
+2. Konfigurer Lambda Function URL med CORS
+3. Opprett en enkel HTML-side som viser alle oppgaver fra systemet
+4. Implementer et skjema for å legge til nye oppgaver
+5. Test løsningen grundig
 
 ### Arkitekturdiagram
 
@@ -565,7 +800,34 @@ sudo systemctl enable httpd
 sudo systemctl status httpd
 ```
 
-### 2. Opprett frontend-filer
+### 2. Konfigurer Lambda Function URL og CORS
+
+For at frontenden skal kunne kommunisere med Lambda-funksjonen, må vi sette opp en Function URL og konfigurere CORS (Cross-Origin Resource Sharing) korrekt:
+
+1. Gå til Lambda-funksjonen i AWS Console
+2. Under "Configuration" tab, velg "Function URL" i venstre meny
+3. Klikk "Create function URL"
+4. I dialogen som åpnes:
+   - Auth type: NONE (siden dette er en demo)
+   - Under "Additional settings":
+     - Configure CORS: Enabled
+     - Allow origin: `*` (i produksjon bør dette begrenses til spesifikke domener)
+     - Allow methods: `*` (for å tillate alle HTTP-metoder)
+     - Allow headers: `content-type, access-control-allow-origin, access-control-allow-methods`
+     - Expose headers: `content-type, access-control-allow-origin, access-control-allow-methods`
+     - Max age: 0
+   - Klikk "Save"
+
+> [!IMPORTANT]
+> CORS-konfigurasjonen over er satt veldig åpen for demonstrasjonsformål. I en produksjonssetting bør du:
+> - Begrense "Allow origin" til spesifikke domener
+> - Spesifisere eksakte HTTP-metoder som trengs (f.eks. GET, POST)
+> - Vurdere sikkerhetsbehov for headers og eksponerte headers
+
+5. Kopier Function URL som vises - du trenger denne i frontend-koden
+6. Test URL-en ved å åpne en ny fane i nettleseren og lime inn URL-en etterfulgt av `/tasks`
+
+### 3. Opprett frontend-filer
 
 **Husk å editere `LAMBDA_BASE_URL` i scriptet nedenfor for at det skal fungere som tiltenkt. 
 
@@ -609,7 +871,7 @@ EOL
 
 # Opprett script.js
 sudo bash -c 'cat > /var/www/html/script.js' << 'EOL'
-const LAMBDA_BASE_URL = 'https://din-lambda-function-url.lambda-url.region.on.aws';
+const LAMBDA_BASE_URL = 'https://kzobijfozlbw6urcajwx3z24wi0leutr.lambda-url.eu-west-1.on.aws';
 
 async function getTasks() {
   try {
@@ -617,13 +879,13 @@ async function getTasks() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
     });
     if (!response.ok) {
       throw new Error('Nettverksfeil ved henting av oppgaver');
     }
     const data = await response.json();
-    displayTasks(JSON.parse(data.body));
+    displayTasks(data);
   } catch (error) {
     console.error('Feil ved henting av oppgaver:', error);
     showError('Kunne ikke hente oppgaver. Vennligst prøv igjen senere.');
@@ -640,7 +902,7 @@ function displayTasks(tasks) {
     taskElement.innerHTML = `
       <h3>${escapeHtml(task.title)}</h3>
       <p>${escapeHtml(task.description)}</p>
-      <span class="status ${task.status.toLowerCase()}">${task.status}</span>
+      <span class="status ${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span>
     `;
     taskList.appendChild(taskElement);
   });
@@ -785,7 +1047,7 @@ input, textarea {
     color: #000;
 }
 
-.status.in.progress {
+.status.in-progress {
     background-color: #87CEEB;
     color: #000;
 }
@@ -796,7 +1058,7 @@ sudo chown apache:apache /var/www/html/*
 sudo chmod 644 /var/www/html/*
 ```
 
-### 3. Testing av løsningen
+### 4. Testing av løsningen
 
 1. Åpne en nettleser og gå til din EC2 Public IP:
    ```
@@ -813,17 +1075,6 @@ sudo chmod 644 /var/www/html/*
     sudo tail -f /var/log/httpd/error_log
     sudo tail -f /var/log/httpd/access_log
     ```
-
-4. Verifiser CORS-innstillinger i Lambda: # TODO fjerne denne seksjonen? Usikker på om CORS trengs
-   ```python
-   def lambda_handler(event, context):
-       headers = {
-           'Access-Control-Allow-Origin': '*',
-           'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-           'Access-Control-Allow-Headers': 'Content-Type'
-       }
-       # ... resten av koden
-   ```
 
 </details>
 
