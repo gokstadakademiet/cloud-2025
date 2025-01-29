@@ -7,6 +7,7 @@
   - [Uke 2](./uke_2)
   - [Uke 3](./uke_3)
   - [Uke 4](./uke_4)
+  - [Uke 5](./uke_5)
 - [Formål](#formål)
 - [Hvordan bruke ukesoppgavene](#hvordan-bruke-ukesoppgavene)
 

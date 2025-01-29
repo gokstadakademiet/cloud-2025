@@ -829,7 +829,7 @@ For at frontenden skal kunne kommunisere med Lambda-funksjonen, må vi sette opp
 
 ### 3. Opprett frontend-filer
 
-**Husk å editere `LAMBDA_BASE_URL` i scriptet nedenfor for at det skal fungere som tiltenkt. 
+**Husk å editere `LAMBDA_BASE_URL` i scriptet nedenfor for at det skal fungere som tiltenkt. **
 
 ```bash
 # Opprett index.html
