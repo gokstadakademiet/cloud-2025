@@ -187,7 +187,7 @@ graph LR
 <details>
 <summary>Løsning</summary>
 
-1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser:
+1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser (husk å endre `LAMBDA_BASE_URL` til din function URL):
 
 ```yaml
   WebServerSecurityGroup:
@@ -221,14 +221,236 @@ graph LR
             - !Ref WebServerSecurityGroup
           SubnetId: !Ref PublicSubnet1
       UserData:
-        Fn::Base64: !Sub |
+        Fn::Base64: |
           #!/bin/bash
           yum update -y
           yum install -y httpd
           systemctl start httpd
           systemctl enable httpd
-          echo "<h1>Welcome to the Task Management System</h1>" > /var/www/html/index.html
+          
+          # Create frontend files
+          cat > /var/www/html/index.html << 'EOL'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Oppgavestyringssystem</title>
+            <link rel="stylesheet" href="style.css">
+          </head>
+          <body>
+            <div class="container">
+              <h1>Oppgavestyringssystem</h1>
+              <div class="form-section">
+                <h2>Legg til ny oppgave</h2>
+                <form id="task-form">
+                  <div class="form-group">
+                    <label for="task-title">Tittel:</label>
+                    <input type="text" id="task-title" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="task-description">Beskrivelse:</label>
+                    <textarea id="task-description" rows="4"></textarea>
+                  </div>
+                  <button type="submit" class="submit-btn">Legg til oppgave</button>
+                </form>
+              </div>
+              <div class="task-section">
+                <h2>Eksisterende oppgaver</h2>
+                <div id="task-list" class="task-grid"></div>
+              </div>
+            </div>
+            <script src="script.js"></script>
+          </body>
+          </html>
+          EOL
+
+          cat > /var/www/html/script.js << 'EOL'
+          const LAMBDA_BASE_URL = 'https://rsz4gecta74rbeuypqfjadpsde0xkyha.lambda-url.eu-west-1.on.aws';
+
+          async function getTasks() {
+            try {
+              const response = await fetch(`${LAMBDA_BASE_URL}/tasks`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+              });
+              if (!response.ok) {
+                throw new Error('Nettverksfeil ved henting av oppgaver');
+              }
+              const data = await response.json();
+              displayTasks(data);
+            } catch (error) {
+              console.error('Feil ved henting av oppgaver:', error);
+              showError('Kunne ikke hente oppgaver. Vennligst prøv igjen senere.');
+            }
+          }
+
+          function displayTasks(tasks) {
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+            
+            tasks.forEach(task => {
+              const taskElement = document.createElement('div');
+              taskElement.className = 'task-card';
+              taskElement.innerHTML = `
+                <h3>${escapeHtml(task.title)}</h3>
+                <p>${escapeHtml(task.description)}</p>
+                <span class="status ${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span>
+              `;
+              taskList.appendChild(taskElement);
+            });
+          }
+
+          function escapeHtml(unsafe) {
+            return unsafe
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+          }
+
+          document.getElementById('task-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitButton = e.target.querySelector('button');
+            submitButton.disabled = true;
+            
+            try {
+              const taskData = {
+                title: document.getElementById('task-title').value.trim(),
+                description: document.getElementById('task-description').value.trim()
+              };
+              
+              const response = await fetch(`${LAMBDA_BASE_URL}/tasks`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+              });
+
+              if (!response.ok) {
+                throw new Error('Feil ved oppretting av oppgave');
+              }
+
+              await getTasks();
+              e.target.reset();
+              alert('Oppgave lagt til!');
+            } catch (error) {
+              console.error('Feil:', error);
+              alert('Kunne ikke legge til oppgave. Prøv igjen senere.');
+            } finally {
+              submitButton.disabled = false;
+            }
+          });
+
+          getTasks();
+          EOL
+
+          cat > /var/www/html/style.css << 'EOL'
+          body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              margin: 0;
+              padding: 20px;
+              background-color: #f5f5f5;
+          }
+
+          .container {
+              max-width: 1200px;
+              margin: 0 auto;
+              padding: 20px;
+          }
+
+          h1 {
+              color: #333;
+              text-align: center;
+              margin-bottom: 30px;
+          }
+
+          .form-section {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              margin-bottom: 30px;
+          }
+
+          .form-group {
+              margin-bottom: 15px;
+          }
+
+          label {
+              display: block;
+              margin-bottom: 5px;
+              font-weight: bold;
+          }
+
+          input, textarea {
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              box-sizing: border-box;
+          }
+
+          .submit-btn {
+              background-color: #4CAF50;
+              color: white;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 16px;
+          }
+
+          .submit-btn:hover {
+              background-color: #45a049;
+          }
+
+          .task-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+              gap: 20px;
+          }
+
+          .task-card {
+              background: white;
+              padding: 15px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+
+          .status {
+              display: inline-block;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: bold;
+          }
+
+          .status.pending {
+              background-color: #ffd700;
+              color: #000;
+          }
+
+          .status.completed {
+              background-color: #90EE90;
+              color: #000;
+          }
+
+          .status.in-progress {
+              background-color: #87CEEB;
+              color: #000;
+          }
+          EOL
+
+          chown apache:apache /var/www/html/*
+          chmod 644 /var/www/html/*
           systemctl restart httpd
+
       Tags:
         - Key: Name
           Value: test-project
@@ -251,22 +473,23 @@ Outputs:
 3. For å verifisere at EC2-instansen er opprettet og tilgjengelig:
   - Vent til stacken er i status "UPDATE_COMPLETE"
   - Gå til EC2-konsollen og finn den nyopprettede instansen
-  - Se at EC2-instansen viser `2/2 checks passed` og ikke `Initialising` under `Status Check` TODO
+  - Se at EC2-instansen viser `2/2 checks passed` og ikke `Initialising` under `Status Check`
   - Kopier den offentlige IP-adressen
   - Åpne en nettleser og lim inn IP-adressen
-  - Du skal se meldingen "Welcome to Task Management System"
+  - Test webapplikasjonen ved å legge til noen oppgaver
   - Test SSH-tilkobling med din private nøkkel: `ssh -i path/to/key.pem ec2-user@public-ip`
 
-Denne oppdateringen til vår CloudFormation-mal legger til en EC2-instans som kjører en enkel webserver. Vi har også lagt til en Security Group som tillater innkommende trafikk på port 22 (SSH) og port 80 (HTTP).
+Denne oppdateringen til vår CloudFormation-mal legger til en EC2-instans som kjører en webserver med en fullstendig frontend-løsning. Vi har også lagt til en Security Group som tillater innkommende trafikk på port 22 (SSH) og port 80 (HTTP).
 
-UserData-seksjonen i EC2-instansens konfigurasjon inneholder et bash-skript som kjører ved oppstart. Dette skriptet installerer og starter Apache webserver, og lager en enkel HTML-side.
+UserData-seksjonen i EC2-instansens konfigurasjon inneholder et bash-skript som installerer og starter Apache webserver, og setter opp alle nødvendige frontend-filer.
 
 > [!IMPORTANT]
 > Sørg for at key pair-navnet i CloudFormation-malen matcher nøyaktig med navnet på key pair du opprettet i AWS Console. Oppbevar den private nøkkelen på et sikkert sted, da den ikke kan lastes ned på nytt fra AWS.
 
-Ved å bruke CloudFormation har vi nå automatisert opprettelsen av både nettverksinfrastruktur og en applikasjonsserver. Dette gjør det enkelt å reprodusere miljøet og holde infrastrukturen som kode.
+Ved å bruke CloudFormation har vi nå automatisert opprettelsen av både nettverksinfrastruktur og en applikasjonsserver med frontend. Dette gjør det enkelt å reprodusere miljøet og holde infrastrukturen som kode.
 
 </details>
+
 
 ## Oppgave 3: Legge til en RDS-database med CloudFormation
 

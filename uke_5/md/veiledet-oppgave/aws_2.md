@@ -30,7 +30,7 @@ I denne oppgaven skal vi utvide vår CloudFormation-mal for å inkludere en Lamb
 
 5. Oppdater den eksisterende stacken med den nye malen
 
-6. Verifiser at Lambda-funksjonen er opprettet og tilgjengelig via Function URL
+6. Verifiser at Lambda-funksjonen er opprettet og tilgjengelig via Function URL med CORS
 
 ### Arkitekturdiagram
 
@@ -142,6 +142,14 @@ Outputs:
                   - s3:GetObject
                 Resource: !Sub "${PyMySQLBucket.Arn}/*"
 
+  TaskManagementFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TaskManagementFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+
   TaskManagementFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -157,39 +165,50 @@ Outputs:
           import os
 
           def get_db_connection():
-          return pymysql.connect(
-            host=os.environ['DB_HOST'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASSWORD'],
-            db=os.environ['DB_NAME']
-          )
+              return pymysql.connect(
+                  host=os.environ['DB_HOST'],
+                  user=os.environ['DB_USER'],
+                  password=os.environ['DB_PASSWORD'],
+                  db=os.environ['DB_NAME'],
+                  charset='utf8mb4',
+                  cursorclass=pymysql.cursors.DictCursor
+              )
 
           def lambda_handler(event, context):
-          conn = get_db_connection()
-          try:
-            with conn.cursor() as cursor:
-            if event['httpMethod'] == 'GET':
-              cursor.execute("SELECT * FROM tasks")
-              tasks = cursor.fetchall()
-              return {
-              'statusCode': 200,
-              'body': json.dumps(tasks)
-              }
-            elif event['httpMethod'] == 'POST':
-              body = json.loads(event['body'])
-              cursor.execute("INSERT INTO tasks (title, description) VALUES (%s, %s)",
-                (body['title'], body['description']))
-              conn.commit()
-              return {
-              'statusCode': 201,
-              'body': json.dumps({'message': 'Task created successfully'})
-              }
-            return {
-            'statusCode': 400,
-            'body': json.dumps({'message': 'Invalid request method'})
-            }
-          finally:
-            conn.close()
+              event['httpMethod'] = event['requestContext']['http']['method']
+              event['path'] = event['requestContext']['http']['path']
+              event['queryStringParameters'] = event.get('queryStringParameters', {})
+
+              conn = get_db_connection()
+              try:
+                  with conn.cursor() as cursor:
+                      if event['httpMethod'] == 'GET':
+                          cursor.execute("SELECT * FROM tasks")
+                          tasks = cursor.fetchall()
+                          return {
+                              'statusCode': 200,
+                              'body': json.dumps(tasks)
+                          }
+                      elif event['httpMethod'] == 'POST':
+                          body = json.loads(event['body'])
+                          cursor.execute("INSERT INTO tasks (title, description) VALUES (%s, %s)",
+                              (body['title'], body['description']))
+                          conn.commit()
+                          return {
+                              'statusCode': 200,
+                              'body': json.dumps({'message': 'Task created successfully'})
+                          }
+                      elif event['httpMethod'] == 'OPTIONS':
+                          return {
+                              'statusCode': 200,
+                              'body': ''
+                          }
+                      return {
+                          'statusCode': 400,
+                          'body': json.dumps({'message': 'Invalid request method'})
+                      }
+              finally:
+                  conn.close()
 
       Runtime: python3.12
       Timeout: 10
@@ -199,7 +218,7 @@ Outputs:
           DB_HOST: !GetAtt TaskManagementDatabase.Endpoint.Address
           DB_USER: admin
           DB_PASSWORD: passordd  # Replace with a secure password
-          DB_NAME: taskmanagement
+          DB_NAME: taskmanager
       Tags:
       - Key: Name
         Value: test-project
@@ -208,6 +227,21 @@ Outputs:
     Type: AWS::Lambda::Url
     Properties:
       AuthType: NONE
+      Cors:
+        AllowCredentials: false
+        AllowHeaders:
+          - "content-type"
+          - "access-control-allow-origin"
+          - "access-control-allow-methods"
+        AllowMethods:
+          - "*"
+        AllowOrigins:
+          - "*"
+        ExposeHeaders:
+          - "content-type"
+          - "access-control-allow-origin"
+          - "access-control-allow-methods"
+        MaxAge: 0
       TargetFunctionArn: !Ref TaskManagementFunction
 
 Outputs:
@@ -251,7 +285,7 @@ Outputs:
     - Ingen feil i CloudWatch logs
 
 > [!IMPORTANT]
-> Husk å erstatte 'your-database-password' med et sikkert passord og verifiser at S3-bøtten er korrekt konfigurert før du laster opp Lambda Layer.
+> Husk å erstatte 'passordd' med et sikkert passord og verifiser at S3-bøtten er korrekt konfigurert før du laster opp Lambda Layer.
 
 </details>
 
@@ -261,38 +295,53 @@ I denne oppgaven skal vi utvide vår CloudFormation-mal for å inkludere Amazon 
 
 ### Oppgavebeskrivelse
 
+I forrige oppgave implementerte vi en Lambda-funksjon som håndterer CRUD-operasjoner mot RDS-databasen. Nå skal vi legge til asynkron meldingshåndtering ved hjelp av SNS og SQS.
+
 1. Modifiser CloudFormation-malen for å legge til:
-   - Et SNS-tema for nye oppgavevarsler
-   - En SQS-kø som abonnerer på SNS-temaet
-   - Nødvendige IAM-tillatelser for Lambda til å publisere til SNS og lese fra SQS
+  - En SNS-topic for nye oppgavevarsler
+  - En SQS-kø som abonnerer på SNS-topicen
+  - Nødvendige IAM-tillatelser for Lambda til å publisere til SNS og lese fra SQS
+
 2. Oppdater Lambda-funksjonen til å publisere meldinger til SNS når nye oppgaver opprettes
+  - Dette gjøres ved å legge til SNS-integrasjon i eksisterende kode
+  - Sørg for at riktige miljøvariabler er tilgjengelige
+  - Legg til SNS_TOPIC_ARN som miljøvariabel i Lambda-funksjonen
+
 3. Lag en ny Lambda-funksjon som prosesserer meldinger fra SQS-køen
+  - Denne funksjonen vil motta meldinger automatisk
+  - Implementer feilhåndtering og logging
+  - Konfigurer event source mapping mellom SQS og Lambda
+  - Sørg for at funksjonen har tilgang til RDS for statusoppdateringer
+
 4. Oppdater den eksisterende stacken med den nye malen
-5. Test den nye funksjonaliteten ved å opprette en ny oppgave og verifisere at meldingen går gjennom SNS til SQS og til slutt prosesseres av den nye Lambda-funksjonen
+  - Verifiser at alle ressurser opprettes korrekt
+  - Sjekk at tillatelser er korrekt konfigurert
+  - Kontroller at både SNS og SQS er koblet sammen riktig
+
+5. Test den nye funksjonaliteten ved å opprette en ny oppgave og verifiser at:
+  - Meldingen publiseres til SNS
+  - Meldingen mottas av SQS
+  - Processing Lambda trigges og behandler meldingen
+  - Statusoppdateringer reflekteres i RDS-databasen
 
 ### Arkitekturdiagram
 
 ```mermaid
 graph TD
-    A[VPC] --> B[Public Subnet 1]
-    A --> C[Public Subnet 2]
-    B --> D[EC2 Instance]
-    B --> E[RDS MySQL]
-    C --> E
-    F[Lambda Function] --> E
-    F --> G[SNS Topic]
-    G --> H[SQS Queue]
-    H --> I[Processing Lambda]
-    J[Function URL] --> F
+   A[Lambda Function] --> B[RDS MySQL]
+   A --> C[SNS Topic]
+   C --> D[SQS Queue]
+   D --> E[Processing Lambda]
+   E --> B
 ```
 
 <details>
 <summary>Løsning</summary>
 
-1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser:
+1. Først, la oss legge til SNS og SQS ressursene i CloudFormation-malen:
 
 ```yaml
-  NewTaskNotificationTopic:
+  TaskNotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: new-task-notification
@@ -300,19 +349,20 @@ graph TD
         - Key: Name
           Value: test-project
 
-  TaskProcessingQueue:
+  TaskQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: task-processing-queue
+      VisibilityTimeout: 300
       Tags:
         - Key: Name
           Value: test-project
 
-  TaskQueuePolicy:
+  QueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref TaskProcessingQueue
+        - !Ref TaskQueue
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -320,64 +370,30 @@ graph TD
             Principal:
               Service: sns.amazonaws.com
             Action: sqs:SendMessage
-            Resource: !GetAtt TaskProcessingQueue.Arn
+            Resource: !GetAtt TaskQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: !Ref NewTaskNotificationTopic
+                aws:SourceArn: !Ref TaskNotificationTopic
 
-  TopicSubscription:
+  SNSSubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: !Ref NewTaskNotificationTopic
       Protocol: sqs
-      Endpoint: !GetAtt TaskProcessingQueue.Arn
+      TopicArn: !Ref TaskNotificationTopic
+      Endpoint: !GetAtt TaskQueue.Arn
+```
 
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      Policies:
-        - PolicyName: LambdaRDSAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - rds-data:ExecuteStatement
-                  - rds-data:BatchExecuteStatement
-                Resource: !GetAtt TaskManagementDatabase.Arn
-        - PolicyName: LambdaSNSPublish
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: sns:Publish
-                Resource: !Ref NewTaskNotificationTopic
-        - PolicyName: LambdaSQSReceive
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:GetQueueAttributes
-                Resource: !GetAtt TaskProcessingQueue.Arn
+2. Oppdater den eksisterende Lambda-funksjonen med SNS-publisering:
 
+```yaml
   TaskManagementFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: task-management-function
       Handler: index.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
+      Layers:
+      - !Ref PyMySQLLayer
       Code:
         ZipFile: |
           import json
@@ -396,12 +412,16 @@ graph TD
               )
 
           def lambda_handler(event, context):
+              event['httpMethod'] = event['requestContext']['http']['method']
+              event['path'] = event['requestContext']['http']['path']
+              event['queryStringParameters'] = event.get('queryStringParameters', {})
+
               conn = get_db_connection()
-              sns = boto3.client('sns')
+              sns = boto3.client('sns', region_name='eu-west-1')
               try:
                   with conn.cursor() as cursor:
                       if event['httpMethod'] == 'GET':
-                          cursor.execute(\"SELECT * FROM tasks\")
+                          cursor.execute("SELECT * FROM tasks")
                           tasks = cursor.fetchall()
                           return {
                               'statusCode': 200,
@@ -409,62 +429,92 @@ graph TD
                           }
                       elif event['httpMethod'] == 'POST':
                           body = json.loads(event['body'])
-                          cursor.execute(\"INSERT INTO tasks (title, description) VALUES (%s, %s)\",
-                                         (body['title'], body['description']))
+                          cursor.execute("INSERT INTO tasks (title, description, status) VALUES (%s, %s, %s)",
+                              (body['title'], body['description'], 'New'))
                           conn.commit()
                           
-                          # Publish to SNS
+                          task_id = cursor.lastrowid
+                          
+                          message = {
+                              'task_id': task_id,
+                              'title': body['title'],
+                              'description': body['description'],
+                              'status': 'New'
+                          }
+                          
                           sns.publish(
                               TopicArn=os.environ['SNS_TOPIC_ARN'],
-                              Message=json.dumps({'task_id': cursor.lastrowid, 'title': body['title'], 'description': body['description']}),
-                              Subject='New Task Added'
+                              Message=json.dumps(message),
+                              Subject='New Task Created'
                           )
                           
                           return {
-                              'statusCode': 201,
-                              'body': json.dumps({'message': 'Task created successfully'})
+                              'statusCode': 200,
+                              'body': json.dumps({
+                                  'message': 'Task created successfully',
+                                  'task_id': task_id
+                              })
                           }
-                  return {
-                      'statusCode': 400,
-                      'body': json.dumps({'message': 'Invalid request method'})
-                  }
               finally:
                   conn.close()
 
-      Runtime: python3.13
-      Timeout: 10
-      MemorySize: 128
+      Runtime: python3.12
+      Timeout: 30
       Environment:
         Variables:
           DB_HOST: !GetAtt TaskManagementDatabase.Endpoint.Address
           DB_USER: admin
-          DB_PASSWORD: your-database-password  # Replace with a secure password
-          DB_NAME: taskmanagement
-          SNS_TOPIC_ARN: !Ref NewTaskNotificationTopic
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref DatabaseSecurityGroup
-        SubnetIds:
-          - !Ref PublicSubnet1
-          - !Ref PublicSubnet2
+          DB_PASSWORD: passordd
+          DB_NAME: taskmanager
+          SNS_TOPIC_ARN: !Ref TaskNotificationTopic
       Tags:
         - Key: Name
           Value: test-project
+```
+
+3. Lag den nye Processing Lambda-funksjonen:
+
+```yaml
+  ProcessingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt TaskQueue.Arn
 
   TaskProcessingFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: task-processing-function
+      FunctionName: process-task
       Handler: index.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt ProcessingLambdaRole.Arn
       Code:
         ZipFile: |
           import json
           import pymysql
+          import time
           import os
 
           def get_db_connection():
-              return pymysql.connect(
+              print("Attempting database connection...")
+              conn = pymysql.connect(
                   host=os.environ['DB_HOST'],
                   user=os.environ['DB_USER'],
                   password=os.environ['DB_PASSWORD'],
@@ -472,33 +522,137 @@ graph TD
                   charset='utf8mb4',
                   cursorclass=pymysql.cursors.DictCursor
               )
+              print("Database connection successful")
+              return conn
 
           def lambda_handler(event, context):
-              for record in event['Records']:
-                  message = json.loads(record['body'])
-                  task_data = json.loads(message['Message'])
-                  
+              print("Starting task processing...")
+              print(f"Received event: {json.dumps(event)}")
+              try:
                   conn = get_db_connection()
-                  try:
+                  
+                  for record in event['Records']:
+                      message = json.loads(record['body'])
+                      task_data = json.loads(message['Message'])
+                      task_id = task_data['task_id']
+                      
                       with conn.cursor() as cursor:
-                          cursor.execute(\"UPDATE tasks SET status = 'Processing' WHERE id = %s\", (task_data['task_id'],))
-                          conn.commit()
-                          print(f\"Processing task {task_data['task_id']}: {task_data['title']}\")
-                  finally:
+                          sql = "UPDATE tasks SET status = %s WHERE id = %s"
+                          cursor.execute(sql, ('In Progress', task_id))
+                      conn.commit()
+                      
+                      time.sleep(5)
+                      
+                      with conn.cursor() as cursor:
+                          sql = "UPDATE tasks SET status = %s WHERE id = %s"
+                          cursor.execute(sql, ('Completed', task_id))
+                      conn.commit()
+                      
+                  print("Task processing completed successfully")
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps('Processing complete')
+                  }
+              except Exception as e:
+                  print(f"Error occurred during processing: {str(e)}")
+                  raise
+              finally:
+                  if 'conn' in locals():
+                      print("Closing database connection")
                       conn.close()
 
-      Runtime: python3.13
-      Timeout: 10
+      Runtime: python3.12
+      Timeout: 30
       MemorySize: 128
       Environment:
         Variables:
           DB_HOST: !GetAtt TaskManagementDatabase.Endpoint.Address
           DB_USER: admin
-          DB_PASSWORD: your-database-password  # Replace with a secure password
-          DB_NAME: taskmanagement
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref DatabaseSecurityGroup
-        SubnetIds:
-          - !Ref PublicSubnet1
-          -
+          DB_PASSWORD: passordd
+          DB_NAME: taskmanager
+      Layers:
+        - !Ref PyMySQLLayer
+
+  SQSEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn: !GetAtt TaskQueue.Arn
+      FunctionName: !GetAtt TaskProcessingFunction.Arn
+
+  SNSPublishPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SNSPublishPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sns:Publish
+            Resource: !Ref TaskNotificationTopic
+      Roles:
+        - !Ref LambdaExecutionRole
+```
+
+4. For å oppdatere stacken:
+- Gå til AWS CloudFormation konsollen (https://console.aws.amazon.com/cloudformation)
+- Finn og velg din eksisterende stack i listen
+- Klikk på "Update" knappen øverst til høyre
+- I "Update stack" vinduet, velg "Replace current template"
+- Velg "Upload a template file"
+- Klikk "Choose file" og velg din oppdaterte template fil
+- Klikk "Next"
+- Gjennomgå parameterne og bekreft/oppdater hvis nødvendig
+- Klikk "Next"
+- Under "Stack options", behold standardinnstillingene
+- Klikk "Next"
+- Gjennomgå endringene som vil bli gjort ("Change set preview")
+- Klikk "Update stack"
+- Vent til stacken er oppdatert (status endres til UPDATE_COMPLETE)
+
+5. Test funksjonaliteten:
+- Gå til Lambda-konsollen (https://console.aws.amazon.com/lambda)
+- Finn og klikk på din "task-management-function"
+- I "Test" fanen, klikk "Create new event"
+- Gi testen et navn (f.eks. "TestPost")
+- Lim inn følgende JSON:
+
+```json
+{
+  "httpMethod": "POST",
+  "body": "{\"title\": \"Test Task\", \"description\": \"Testing SNS/SQS integration\"}"
+}
+```
+
+- Klikk "Save" og deretter "Test"
+
+For å verifisere at alt fungerer:
+1. Sjekk Lambda-funksjonens CloudWatch logs:
+   - I Lambda-konsollen, velg "Monitor" fanen
+   - Klikk "View CloudWatch logs"
+   - Se etter bekreftelse på at oppgaven ble opprettet
+
+2. Sjekk SNS Topic:
+   - Gå til SNS-konsollen (https://console.aws.amazon.com/sns)
+   - Velg din "new-task-notification" topic
+   - Under "Monitoring", verifiser at meldingen ble sendt
+
+3. Sjekk SQS Queue:
+   - Gå til SQS-konsollen (https://console.aws.amazon.com/sqs)
+   - Velg din "task-processing-queue"
+   - Under "Monitoring", verifiser at meldingen ble mottatt
+
+4. Sjekk Processing Lambda:
+   - Gå tilbake til Lambda-konsollen
+   - Velg "process-task" funksjonen
+   - Se i CloudWatch logs at oppgaven ble prosessert
+   - Verifiser at status endret seg fra "New" til "In Progress" til "Completed"
+
+> [!TIP]
+> Hold CloudWatch Logs åpne i en egen fane mens du tester - da er det lettere å følge med på hele prosessen i sanntid.
+
+> [!NOTE]
+> Det kan ta noen sekunder før meldingen går gjennom hele kjeden. Vær tålmodig og refresh loggene hvis nødvendig.
+
+</details>

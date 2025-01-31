@@ -6,17 +6,16 @@ TARGET_FILE="ukesoppgaver.md"
 
 echo "Generating markdown file from files in $SOURCE_DIR"
 
-echo "# Oppgavesett: AWS - Console, VPC og EC2" > "$TARGET_FILE"
+echo "# Oppgavesett: AWS - Cloudformation" > "$TARGET_FILE"
 
 echo "# Innholdsfortegnelse
 
-1. [Oppsett av VPC og EC2-instans](#oppgave-1-oppsett-av-vpc-og-ec2-instans)
-2. [Installasjon av webserver og database](#oppgave-2-installasjon-av-webserver-og-database)
-3. [Implementer backend for oppgavestyring](#oppgave-3-implementer-backend-for-oppgavestyring)
-4. [Implementer frontend for oppgavestyring](#oppgave-4-implementer-frontend-for-oppgavestyring)
-5. [Migrering til containere med Docker og ECS](#oppgave-5-migrering-til-containere-med-docker-og-ecs)
-6. [Konfigurering av Security Groups](#oppgave-6-konfigurering-av-security-groups)
-7. [Implementering av høy tilgjengelighet med ECS](#oppgave-7-implementering-av-høy-tilgjengelighet-med-ecs)
+1. [Opprette grunnleggende nettverksinfrastruktur med CloudFormation](#oppgave-1-opprette-grunnleggende-nettverksinfrastruktur-med-cloudformation)
+2. [Opprette en EC2-instans med CloudFormation](#oppgave-2-opprette-en-ec2-instans-med-cloudformation)
+3. [Legge til en RDS-database med CloudFormation](#oppgave-3-legge-til-en-rds-database-med-cloudformation)
+4. [Implementere Lambda-funksjon med CloudFormation](#oppgave-4-implementere-lambda-funksjon-med-cloudformation)
+5. [Implementere SNS og SQS med CloudFormation](#oppgave-5-implementere-sns-og-sqs-med-cloudformation)
+6. [Implementere CloudWatch Logs for Lambda-funksjoner](#oppgave-6-implementere-cloudwatch-logs-for-lambda-funksjoner)
 " >> "$TARGET_FILE"
 
 echo "# Introduksjon til skyteknologi med AWS: Oppgavestyringssystem
