@@ -14,7 +14,10 @@ I denne oppgaven skal vi utvide vår CloudFormation-mal for å inkludere en Lamb
 2. Forbered og last opp Lambda Layer:
   - På din lokale maskin, opprett en mappe `python`
   - Inne i `python` mappen, kjør: `pip install pymysql -t .`
-  - Zip innholdet av `python` mappen til `pymysql-layer.zip`
+  - Zip innholdet av `python` mappen med kommandoen:
+    ```bash
+    zip -r pymysql-layer.zip python/
+    ```
   - Gå tilbake til S3-konsollen
   - Velg bøtten du opprettet
   - Klikk "Upload" og velg `pymysql-layer.zip`
@@ -267,16 +270,26 @@ Outputs:
   - For GET request, bruk:
     ```json
     {
-     "httpMethod": "GET",
-     "path": "/tasks"
+      "version": "2.0",
+      "requestContext": {
+        "http": {
+          "method": "GET",
+          "path": "/tasks"
+        }
+      }
     }
     ```
-  - For POST request, bruk:
+    - For POST request, bruk:
     ```json
     {
-     "httpMethod": "POST",
-     "path": "/tasks",
-     "body": "{\"title\":\"Test Task\",\"description\":\"This is a test task\"}"
+      "version": "2.0", 
+      "requestContext": {
+        "http": {
+          "method": "POST",
+          "path": "/tasks"
+        }
+      },
+      "body": "{\"title\":\"Test Task\",\"description\":\"This is a test task\"}"
     }
     ```
   - Kjør testene og verifiser:
