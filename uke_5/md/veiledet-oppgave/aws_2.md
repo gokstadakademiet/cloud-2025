@@ -35,6 +35,8 @@ I denne oppgaven skal vi utvide vår CloudFormation-mal for å inkludere en Lamb
 
 6. Verifiser at Lambda-funksjonen er opprettet og tilgjengelig via Function URL med CORS
 
+7. Oppdater `LAMBDA_BASE_URL` i `script.js` på EC2-instansen med function URL fra lambdaen du nettopp provisjonerte opp.
+
 ### Arkitekturdiagram
 
 ```mermaid
@@ -297,8 +299,24 @@ Outputs:
     - Korrekt respons i result
     - Ingen feil i CloudWatch logs
 
+7. For å oppdatere `LAMBDA_BASE_URL` i `script.js`:
+
+```bash
+# SSH til EC2 instansen
+ssh -i din-key.pem ec2-user@din-ec2-ip
+
+# Oppdater LAMBDA_BASE_URL i script.js med Function URL
+sudo sed -i "s#const LAMBDA_BASE_URL = '.*'#const LAMBDA_BASE_URL = '$(aws lambda get-function-url-config --function-name task-management-function --query 'FunctionUrl' --output text | sed 's/\/$//')'#" /var/www/html/script.js
+```
+
 > [!IMPORTANT]
 > Husk å erstatte 'passordd' med et sikkert passord og verifiser at S3-bøtten er korrekt konfigurert før du laster opp Lambda Layer.
+
+> [!NOTE]
+> Sjekk at LAMBDA_BASE_URL ble korrekt oppdatert ved å verifisere innholdet i script.js:
+```bash
+cat /var/www/html/script.js
+```
 
 </details>
 

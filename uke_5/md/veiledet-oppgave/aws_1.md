@@ -187,7 +187,7 @@ graph LR
 <details>
 <summary>Løsning</summary>
 
-1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser (husk å endre `LAMBDA_BASE_URL` til din function URL):
+1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser (dette til returnere en feilmelding ved forsøk på å legge til oppgave, da vi foreløpig ikke har opprettet APIet den interagerer mot. Det kommer i senere oppgave):
 
 ```yaml
   WebServerSecurityGroup:
@@ -208,12 +208,42 @@ graph LR
         - Key: Name
           Value: test-project
 
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: LambdaReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:GetFunctionUrlConfig
+                Resource: '*'
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EC2InstanceRole
+
   WebServerInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: ami-05edf2d87fdbd91c1  # Amazon Linux 2023 AMI in eu-west-1
       InstanceType: t2.micro
       KeyName: taskmanager-key  # Name of the key pair you created
+      IamInstanceProfile: !Ref EC2InstanceProfile
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
