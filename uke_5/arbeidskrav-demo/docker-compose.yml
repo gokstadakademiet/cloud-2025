@@ -1,0 +1,32 @@
+version: '3'
+services:
+  web:
+    build: ./api
+    container_name: api
+    environment:
+      - DATABASE_URL=mysql://user:passord@db:3306/todos
+    # ports:
+    #   - "5000:5000"
+
+  db:
+    build: ./db
+    environment:
+      - MYSQL_ROOT_PASSWORD=passord
+      - MYSQL_DATABASE=todos
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=passord
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    
+volumes:
+  mysql_data:

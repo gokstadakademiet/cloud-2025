@@ -1,0 +1,5 @@
+flask
+flask-sqlalchemy
+pymysql
+psycopg2-binary
+cryptography

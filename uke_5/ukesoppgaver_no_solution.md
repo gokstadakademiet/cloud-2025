@@ -1368,11 +1368,10 @@ I denne oppgaven skal vi utvide vår CloudFormation-mal for å inkludere CloudWa
 
 ### Oppgavebeskrivelse
 
-1. Modifiser CloudFormation-malen for å legge til nødvendige IAM-tillatelser for Lambda-funksjonene til å skrive til CloudWatch Logs
-2. Oppdater Lambda-funksjonene til å logge viktige hendelser og feil
-3. Oppdater den eksisterende stacken med den nye malen
-4. Utfør noen operasjoner som trigger Lambda-funksjonene
-5. Verifiser at loggene blir skrevet til CloudWatch Logs
+1. Oppdater Lambda-funksjonene til å logge viktige hendelser og feil
+2. Oppdater den eksisterende stacken med den nye malen
+3. Utfør noen operasjoner som trigger Lambda-funksjonene
+4. Verifiser at loggene blir skrevet til CloudWatch Logs
 
 ### Arkitekturdiagram
 
@@ -1388,65 +1387,6 @@ graph TD
 1. Modifiser `network-infrastructure.yaml` filen og legg til følgende ressurser:
 
 ```yaml
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      Policies:
-        - PolicyName: LambdaRDSAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - rds-data:ExecuteStatement
-                  - rds-data:BatchExecuteStatement
-                Resource: !GetAtt TaskManagementDatabase.DBInstanceArn
-        - PolicyName: LambdaS3Access
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: !Sub "${PyMySQLBucket.Arn}/*"
-        # Add missing policies
-        - PolicyName: LambdaSNSPublish
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: sns:Publish
-                Resource: !Ref TaskNotificationTopic
-        - PolicyName: LambdaSQSReceive
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:GetQueueAttributes
-                Resource: !GetAtt TaskQueue.Arn
-        - PolicyName: LambdaCloudWatchLogs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: 
-                  - "*"
-
   TaskManagementFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -1560,7 +1500,7 @@ graph TD
     Properties:
       FunctionName: task-processing-function
       Handler: index.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt TaskProcessingFunction.Arn
       Code:
         ZipFile: |
           import json
