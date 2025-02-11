@@ -718,6 +718,14 @@ sudo usermod -a -G docker ec2-user
 exit
 ```
 
+Alternativt slik hvis man ønsker å også installere `docker-compose`: 
+
+```bash
+sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose version
+```
+
 4. Installer MySQL på samme måte som i oppgave 2:
 ```
 sudo dnf install mariadb105-server mariadb105-server-utils -y

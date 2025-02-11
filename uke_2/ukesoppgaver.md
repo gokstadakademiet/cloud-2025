@@ -15,6 +15,9 @@ I dette kurset skal vi bygge et enkelt oppgavestyringssystem ved hjelp av AWS-tj
 > [!NOTE]
 > **Før du begynner er det viktig at du setter deg inn i AWS Free Tier, se artikkel [her](../aws.md).**
 
+> [!NOTE]
+> **Hvis du bruker Windows er det lurt å laste ned Git Bash og bruke det som terminal for oppgavene, fremfor f.eks. PowerShell som er typisk på Windows. Du vil da kunne kjøre samme kommandoer som vist i ukesoppgavene Se video for hvordan Git Bash installeres [her](https://www.youtube.com/watch?v=qdwWe9COT9k).**
+
 ## Oppgave 1: Oppsett av VPC og EC2-instans
 
 I denne oppgaven skal du sette opp en Virtual Private Cloud (VPC) og lansere en EC2-instans som vil fungere som vår webserver.
@@ -75,6 +78,8 @@ graph TD
             - Inbound Security Group Rules: 
                 - Type: ssh, Protocol: TCP, Port range: 22, Source Type: anywhere
                 - `Add security group rule` -> Type: http, Protocol TCP, port: 80, Source Type: 0.0.0.0/0 (anywhere)
+
+    - Konfigurer security group: Tillat inngående trafikk på port 22 og 80
     - Launch instance
 
 I EC2-konsollet i AWS vil du nå se at EC2-instansen din står og initialiserer med `Status check` lik `Initializing`. Se bilde:
@@ -733,6 +738,14 @@ sudo usermod -a -G docker ec2-user
 exit
 ```
 
+Alternativt slik hvis man ønsker å også installere `docker-compose`: 
+
+```bash
+sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose version
+```
+
 4. Installer MySQL på samme måte som i oppgave 2:
 ```
 sudo dnf install mariadb105-server mariadb105-server-utils -y
@@ -837,6 +850,5 @@ docker logs backend
 ```
 
 </details>
-
 
 

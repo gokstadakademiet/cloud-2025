@@ -1,15 +1,17 @@
 version: '3'
 services:
   web:
-    build: ./api
+    image: flaattengokstad/api:latest
+    # build: ./api
     container_name: api
     environment:
-      - DATABASE_URL=mysql://user:passord@db:3306/todos
+      - DATABASE_URL=mysql://product-api:securepass@database-1.c7g8yamuicvd.eu-west-1.rds.amazonaws.com:3306/products
     # ports:
     #   - "5000:5000"
 
   db:
-    build: ./db
+    image: flaattengokstad/db:latest
+    # build: ./db
     environment:
       - MYSQL_ROOT_PASSWORD=passord
       - MYSQL_DATABASE=todos
@@ -19,10 +21,10 @@ services:
     #   - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   nginx:
-    build: ./nginx
+    image: flaattengokstad/nginx:latest
+    # build: ./nginx
     ports:
       - "80:80"
     depends_on:
